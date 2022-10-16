@@ -1,0 +1,20 @@
+[package]
+name = "ml-image-ui"
+version = "0.1.0"
+authors = [ "wasmCloud Team" ]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+name = "ml_image_ui"
+
+[dependencies]
+futures = "0.3"
+wasmbus-rpc = "0.10"
+wasmcloud-interface-httpserver = "0.7"
+
+[profile.release]
+# Optimize for small code size
+lto = true
+opt-level = "s"
+strip = true

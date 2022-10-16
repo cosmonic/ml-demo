@@ -1,6 +1,6 @@
 # Makefile for imagenetpostprocessor
 
-PROJECT  = imagenetpostprocessor
+PROJECT  = ml_imagenetpostprocessor
 VERSION  = $(shell cargo metadata --no-deps --format-version 1 | jq -r '.packages[] .version' | head -1)
 REVISION = 0
 # list of all contract claims for actor signing (space-separated)

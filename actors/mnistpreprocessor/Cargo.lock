@@ -1113,7 +1113,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "mnistpreprocessor"
+name = "ml-mnistpreprocessor"
 version = "0.1.0"
 dependencies = [
  "form_urlencoded",

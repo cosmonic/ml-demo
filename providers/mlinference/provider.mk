@@ -37,13 +37,14 @@ ifeq ($(WASH_REG_USER),)
 endif
 
 par_targets ?= \
-   	aarch64-unknown-linux-gnu
-	   
-	# x86_64-unknown-linux-gnu
-   	# x86_64-apple-darwin \
-   	# aarch64-apple-darwin \
-	# armv7-unknown-linux-gnueabihf \
-   	# x86_64-pc-windows-gnu
+	aarch64-unknown-linux-gnu \
+	aarch64-apple-darwin 
+
+	#x86_64-unknown-linux-gnu \
+	#x86_64-apple-darwin \
+	#armv7-unknown-linux-gnueabihf \
+	#x86_64-pc-windows-gnu \
+	#x86_64-pc-windows-msvc
 
 # Lookup table from rust target triple to wasmcloud architecture doubles
 # Thanks to https://stackoverflow.com/a/40919906 for the pointer to
@@ -54,6 +55,7 @@ ARCH_LOOKUP_armv7-unknown-linux-gnueabihf=arm-linux
 ARCH_LOOKUP_aarch64-unknown-linux-gnu=aarch64-linux
 ARCH_LOOKUP_aarch64-apple-darwin=aarch64-macos
 ARCH_LOOKUP_x86_64-pc-windows-gnu=x86_64-windows
+ARCH_LOOKUP_x86_64-pc-windows-msvc=x86_64-windows
 
 bin_targets = $(foreach target,$(par_targets),target/$(target)/release/$(bin_name))
 
@@ -82,9 +84,14 @@ par:: $(dest_par)
 # rebuild base par if target0 changes
 $(dest_par): $(bin_target0) Makefile Cargo.toml
 	@mkdir -p $(dir $(dest_par))
+	bin_src=$(bin_target0);  \
+	if [ $(par_target0) = "x86_64-pc-windows-gnu" ] || \
+	   [ $(par_target0) = "x86_64-pc-windows-msvc" ] ; then \
+		bin_src=$$bin_src.exe;  \
+	fi; \
 	$(WASH) par create \
 		--arch $(ARCH_LOOKUP_$(par_target0)) \
-		--binary $(bin_target0) \
+		--binary $$bin_src \
 		--capid $(CAPABILITY_ID) \
 		--name $(NAME) \
 		--vendor $(VENDOR) \
@@ -101,7 +108,7 @@ par-full: $(dest_par) $(bin_targets)
 		if [ $$target = "x86_64-pc-windows-gnu" ]; then \
 			target_dest=$$target_dest.exe;  \
 		fi; \
-	    par_arch=`printf $$target | sed -E 's/([^-]+)-([^-]+)-([^-]+)(-gnu.*)?/\1-\3/' | sed 's/darwin/macos/'`; \
+	    par_arch=`echo $$target | sed -E 's/([^-]+)-([^-]+)-([^-]+)(-gnu.*)?/\1-\3/' | sed 's/darwin/macos/'`; \
 		echo building $$par_arch; \
 		if [ $$target_dest != $(cross_target0) ] && [ -f $$target_dest ]; then \
 		    $(WASH) par insert --arch $$par_arch --binary $$target_dest $(dest_par); \
@@ -122,8 +129,14 @@ target/debug/$(bin_name): $(RUST_DEPS)
 
 # cross-compile target, remove intermediate build artifacts before build
 target/%/release/$(bin_name): $(RUST_DEPS)
-	tname=`printf $@ | sed -E 's_target/([^/]+)/release.*$$_\1_'` &&\
+	mkdir -p ${HOME}/.cache
+	tname=`echo $@ | sed -E 's_target/([^/]+)/release.*$$_\1_'` &&\
+	echo target name $$tname &&\
 	rm -rf target/release/build &&\
+	rm -rf target/release/deps &&\
+	TARGET_CC="$$tname"-gcc \
+	TARGET_AR="$$tname"-ar \
+	XDG_CACHE_HOME=${HOME}/.cache \
 	cross build --release --target $$tname
 
 endif
@@ -187,7 +200,6 @@ make-vars:
 	@echo "platform       : $(platform)"
 	@echo "machine_id     : $(machine_id)"
 	@echo "default-par    : $(par_target0)"
-	@echo "project_dir    : $(project_dir)"
 	@echo "subdirs        : $(subdirs)"
 	@echo "top_targets    : $(top_targets)"
 	@echo "NAME           : $(NAME)"

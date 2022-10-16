@@ -1,12 +1,12 @@
 [package]
-name = "mnistpostprocessor"
+name = "ml-mnistpostprocessor"
 version = "0.1.0"
 authors = [ "" ]
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
-name = "mnistpostprocessor"
+name = "ml_mnistpostprocessor"
 
 [dependencies]
 futures = "0.3"
@@ -21,3 +21,4 @@ wasmcloud_interface_mlimagenet = { path="../../interfaces/imagenetpostprocess/ru
 # Optimize for small code size
 lto = true
 opt-level = "s"
+strip = true

@@ -35,7 +35,7 @@ export WASMCLOUD_RPC_TIMEOUT_MS=8000
 # enable verbose logging
 export WASMCLOUD_STRUCTURED_LOGGING_ENABLED=1
 export WASMCLOUD_STRUCTURED_LOG_LEVEL=debug
-export RUST_LOG=debug
+export RUST_LOG=${RUST_LOG:-RUST_LOG=debug,hyper=info,oci_distribution=info,reqwest=info}
 
 ##
 #   BINDLE
@@ -61,10 +61,11 @@ REG_SERVER=127.0.0.1:5000
 # registry server as seen by wasmcloud host. use "registry:5000" if host is in docker
 REG_SERVER_FROM_HOST=127.0.0.1:5000
 
-#HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.15.0
-#HTTPSERVER_ID=VAG3QITQQ2ODAOWB5TTQSDJ53XK3SHBEIFNK4AYJ5RKAX2UNSCAPHA5M
-HTTPSERVER_REF=127.0.0.1:5000/httpserver:0.15.1
-HTTPSERVER_ID=VDWKHKPIIORJM4HBFHL2M7KZQD6KMSQ4TLJOCS6BIQTIT6S7E6TXGLIP
+HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.16.0
+HTTPSERVER_ID=VAG3QITQQ2ODAOWB5TTQSDJ53XK3SHBEIFNK4AYJ5RKAX2UNSCAPHA5M
+
+#HTTPSERVER_REF=127.0.0.1:5000/httpserver:0.15.1
+#HTTPSERVER_ID=VDWKHKPIIORJM4HBFHL2M7KZQD6KMSQ4TLJOCS6BIQTIT6S7E6TXGLIP
 
 MLINFERENCE_REF=${REG_SERVER}/mlinference:0.2.1
 
@@ -214,7 +215,7 @@ start_services() {
 
     # start wasmCloud host in background
     export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
-    host_cmd start
+    host_cmd daemon
 }
 
 start_actors() {
@@ -236,8 +237,8 @@ start_providers() {
     local _host_id=$(host_id)
 
 
-    #wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 15000
-    cd ../../../capability-providers/httpserver-rs && make push && make start
+    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 15000
+    #cd ../../../capability-providers/httpserver-rs && make push && make start
 
     # make sure inference provider is built
     #make -C ${_DIR}/../providers/mlinference all
@@ -304,9 +305,9 @@ run_all() {
     start_services
 
     # start host console to view logs
-    if [ "$1" = "--console" ] && [ -n "$TERMINAL" ]; then
-        $TERMINAL -e ./run.sh host attach &
-    fi
+    #if [ "$1" = "--console" ] && [ -n "$TERMINAL" ]; then
+    #    $TERMINAL -e ./run.sh host attach &
+    #fi
 
     # push capability provider to local registry
     push_capability_provider

@@ -970,22 +970,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "imagenetpreprocrgb8"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "byteorder",
- "form_urlencoded",
- "futures 0.3.24",
- "image",
- "ndarray",
- "wasmbus-rpc",
- "wasmcloud-interface-logging",
- "wasmcloud_interface_mlpreprocessing",
-]
-
-[[package]]
 name = "indexmap"
 version = "1.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1148,6 +1132,22 @@ dependencies = [
  "log",
  "wasi",
  "windows-sys",
+]
+
+[[package]]
+name = "ml-imagenetpreprocrgb8"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "byteorder",
+ "form_urlencoded",
+ "futures 0.3.24",
+ "image",
+ "ndarray",
+ "wasmbus-rpc",
+ "wasmcloud-interface-logging",
+ "wasmcloud_interface_mlpreprocessing",
 ]
 
 [[package]]

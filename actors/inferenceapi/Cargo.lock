@@ -921,23 +921,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "inferenceapi"
-version = "0.2.1"
-dependencies = [
- "async-trait",
- "form_urlencoded",
- "futures 0.3.24",
- "serde",
- "serde_json",
- "wasmbus-rpc",
- "wasmcloud-interface-httpserver",
- "wasmcloud-interface-logging",
- "wasmcloud_interface_mlimagenet",
- "wasmcloud_interface_mlinference",
- "wasmcloud_interface_mlpreprocessing",
-]
-
-[[package]]
 name = "instant"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1075,6 +1058,23 @@ dependencies = [
  "log",
  "wasi",
  "windows-sys",
+]
+
+[[package]]
+name = "ml-inferenceapi"
+version = "0.2.1"
+dependencies = [
+ "async-trait",
+ "form_urlencoded",
+ "futures 0.3.24",
+ "serde",
+ "serde_json",
+ "wasmbus-rpc",
+ "wasmcloud-interface-httpserver",
+ "wasmcloud-interface-logging",
+ "wasmcloud_interface_mlimagenet",
+ "wasmcloud_interface_mlinference",
+ "wasmcloud_interface_mlpreprocessing",
 ]
 
 [[package]]

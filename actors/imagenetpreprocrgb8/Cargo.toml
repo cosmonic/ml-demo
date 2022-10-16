@@ -1,12 +1,12 @@
 [package]
-name = "imagenetpreprocrgb8"
+name = "ml-imagenetpreprocrgb8"
 version = "0.1.0"
 authors = [ "" ]
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
-name = "imagenetpreprocrgb_8"
+name = "ml_imagenetpreprocrgb_8"
 
 [dependencies]
 anyhow = "1.0"
@@ -24,3 +24,4 @@ wasmcloud_interface_mlpreprocessing = { path="../../interfaces/mlpreprocessing/r
 # Optimize for small code size
 lto = true
 opt-level = "s"
+strip = true

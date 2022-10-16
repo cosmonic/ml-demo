@@ -1,12 +1,12 @@
 [package]
-name = "inferenceapi"
+name = "ml-inferenceapi"
 version = "0.2.1"
 authors = [ "" ]
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
-name = "inferenceapi"
+name = "ml_inferenceapi"
 
 [dependencies]
 async-trait = "0.1"
@@ -25,3 +25,4 @@ wasmcloud_interface_mlimagenet = { path="../../interfaces/imagenetpostprocess/ru
 # Optimize for small code size
 lto = true
 opt-level = "s"
+strip = true
