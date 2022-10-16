@@ -1,12 +1,12 @@
 [package]
-name = "imagenetpostprocessor"
+name = "ml-imagenetpostprocessor"
 version = "0.2.0"
 authors = [ "" ]
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
-name = "imagenetpostprocessor"
+name = "ml_imagenetpostprocessor"
 
 [dependencies]
 async-trait = "0.1"
@@ -23,3 +23,4 @@ wasmcloud_interface_mlimagenet = { path="../../interfaces/imagenetpostprocess/ru
 # Optimize for small code size
 lto = true
 opt-level = "s"
+strip = true

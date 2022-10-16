@@ -2,7 +2,7 @@
 
 CAPABILITY_ID = "wasmcloud:mlinference"
 NAME = "mlinference"
-VENDOR = "Acme"
+VENDOR = "wasmCloud"
 PROJECT = mlinference
 VERSION = 0.2.0
 REVISION = 0

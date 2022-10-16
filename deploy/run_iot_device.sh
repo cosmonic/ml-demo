@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+!/usr/bin/env bash
 set -e
 
 _DIR=$(dirname ${BASH_SOURCE[0]})
@@ -81,8 +81,11 @@ MLINFERENCE_REF=${REG_SERVER}/v2/mlinference:0.3.2
 # actor to link to httpsrever. 
 INFERENCEAPI_ACTOR=${_DIR}/../actors/inferenceapi
 
+IMAGE_UI_ACTOR=${_DIR}/../actors/image-ui
+
 # http configuration file. use https_config.json to enable TLS
-HTTP_CONFIG=http_config.json
+INFERENCE_ADDR=0.0.0.0:8078
+IMAGE_UI_ADDR=0.0.0.0:8079
 
 MODEL_CONFIG=actor_config.json
 
@@ -273,7 +276,7 @@ start_providers() {
     wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 32000
 
     echo "starting capability provider '${HTTPSERVER_REF}' from registry .."
-    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 20000
+    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id # --timeout-ms 20000
     #cd ../../../capability-providers/httpserver-rs && make push && make start
     #wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 32000
 }
@@ -290,10 +293,13 @@ link_providers() {
     local _actor_id
     local _a
 
-    # link inferenceapi actor to http server
+    # link inferenceapi actor to http server, so it can be curl'd directly
     _actor_id=$(make -C $INFERENCEAPI_ACTOR --silent actor_id)
-    wash ctl link put $_actor_id $HTTPSERVER_ID     \
-        wasmcloud:httpserver config_b64=$(b64_encode_file $HTTP_CONFIG )
+    wash ctl link put $_actor_id $HTTPSERVER_ID wasmcloud:httpserver address=$INFERENCE_ADDR 
+
+    # link image-ui actor to http server on its own port
+    _actor_id=$(make -C $IMAGE_UI_ACTOR --silent actor_id)
+    wash ctl link put $_actor_id $HTTPSERVER_ID wasmcloud:httpserver address=$IMAGE_UI_ADDR 
 
     # use locally-generated id, since mlinference provider isn't published yet
     MLINFERENCE_ID=$(wash par inspect -o json ${_DIR}/../providers/mlinference/build/mlinference.par.gz | jq -r '.service')
@@ -308,19 +314,6 @@ show_inventory() {
     wash ctl get inventory $(host_id)
 }
 
-# check config files
-check_files() {
-
-    for f in $HTTP_CONFIG; do
-        if [ ! -f $f ]; then
-            echo "missing file:$f"
-            exit 1
-        fi
-    done
-
-	# check syntax of json files
-	jq < $HTTP_CONFIG >/dev/null
-}
 
 stop_registry() {
     set +e
@@ -338,13 +331,17 @@ run_all() {
     # turn off local registry
     stop_registry
 
+    # stop services if they were leftover
+    killall --quiet -KILL wasmcloud_httpserver_default || true
+    killall --quiet -KILL wasmcloud_mlinference_default || true
+
+
     # make sure we have all prerequisites installed
     ${_DIR}/checkup.sh
 
     if [ ! -f $SECRETS ]; then
         create_secrets
     fi
-    check_files
 
     # start all the containers in case the target is localhost
     if [ "$TARGET_DEVICE_IP" != "127.0.0.1" ]; then
@@ -391,7 +388,7 @@ case $1 in
     bindle-create | create-bindle ) create_bindle ;;
     start-actors ) start_actors ;;
     start-providers ) start_providers ;;
-    link-providers ) link_providers ;;
+    link-providers | link-actors ) link_providers ;;
     host-start ) shift; host-start $@ ;;
     run-all | all ) shift; run_all $@ ;;
 

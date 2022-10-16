@@ -16,6 +16,7 @@ const IMAGENET_POSTPROCESS_ACTOR: &str = "mlinference/imagenetpostprocessor";
 
 const MNIST_PREPROCESS_ACTOR: &str = "mlinference/mnistpreprocessor";
 const MNIST_POSTPROCESS_ACTOR: &str = "mlinference/mnistpostprocessor";
+const DEFAULT_LINK: &str = "default";
 
 #[derive(Debug, Default, Actor, HealthResponder)]
 #[services(Actor, HttpServer)]
@@ -41,10 +42,12 @@ impl HttpServer for InferenceapiActor {
                 })?;
 
                 // validate
+                let (model_name, link_name) = choose_model_and_link(model_name);
                 validate(model_name, &tensor).await?;
 
                 // predict
-                let prediction: InferenceOutput = predict(ctx, model_name, tensor).await?;
+                let prediction: InferenceOutput =
+                    predict(ctx, model_name, link_name, tensor).await?;
 
                 if let Status::Error(error) = prediction.result {
                     Ok(HttpResponse::internal_server_error(format!(
@@ -66,10 +69,12 @@ impl HttpServer for InferenceapiActor {
                 })?;
 
                 // validate
+                let (model_name, link_name) = choose_model_and_link(model_name);
                 validate(model_name, &tensor).await?;
 
                 // predict
-                let prediction: InferenceOutput = predict(ctx, model_name, tensor).await?;
+                let prediction: InferenceOutput =
+                    predict(ctx, model_name, link_name, tensor).await?;
 
                 if let Status::Error(e) = prediction.result {
                     Ok(HttpResponse::internal_server_error(format!(
@@ -95,11 +100,12 @@ impl HttpServer for InferenceapiActor {
                     .await?;
 
                 // validate
+                let (model_name, link_name) = choose_model_and_link(model_name);
                 validate(model_name, &preprocessed.tensor).await?;
 
                 // predict
                 let prediction: InferenceOutput =
-                    predict(ctx, model_name, preprocessed.tensor).await?;
+                    predict(ctx, model_name, link_name, preprocessed.tensor).await?;
 
                 if let Status::Error(e) = prediction.result {
                     Ok(HttpResponse::internal_server_error(format!(
@@ -129,7 +135,7 @@ impl HttpServer for InferenceapiActor {
 
                 // predict
                 let prediction: InferenceOutput =
-                    predict(ctx, model_name, preprocessed.tensor).await?;
+                    predict(ctx, model_name, DEFAULT_LINK, preprocessed.tensor).await?;
 
                 if let Status::Error(e) = prediction.result {
                     Ok(HttpResponse::internal_server_error(format!(
@@ -155,11 +161,12 @@ impl HttpServer for InferenceapiActor {
                     .await?;
 
                 // validate
+                let (model_name, link_name) = choose_model_and_link(model_name);
                 validate(model_name, &preprocessed.tensor).await?;
 
                 // predict
                 let prediction: InferenceOutput =
-                    predict(ctx, model_name, preprocessed.tensor).await?;
+                    predict(ctx, model_name, link_name, preprocessed.tensor).await?;
 
                 // postprocess
                 let postprocessed = ImagenetSender::to_actor(IMAGENET_POSTPROCESS_ACTOR)
@@ -192,7 +199,7 @@ impl HttpServer for InferenceapiActor {
 
                 // predict
                 let prediction: InferenceOutput =
-                    predict(ctx, model_name, preprocessed.tensor).await?;
+                    predict(ctx, model_name, DEFAULT_LINK, preprocessed.tensor).await?;
 
                 // postprocess
                 let postprocessed = ImagenetSender::to_actor(IMAGENET_POSTPROCESS_ACTOR)
@@ -227,7 +234,7 @@ impl HttpServer for InferenceapiActor {
 
                 // predict
                 let prediction: InferenceOutput =
-                    predict(ctx, model_name, preprocessed.tensor).await?;
+                    predict(ctx, model_name, DEFAULT_LINK, preprocessed.tensor).await?;
 
                 // postprocess
                 let postprocessed = ImagenetSender::to_actor(MNIST_POSTPROCESS_ACTOR)
@@ -275,7 +282,30 @@ async fn validate(model_name: &str, tensor: &Tensor) -> Result<(), RpcError> {
     Ok(())
 }
 
-async fn predict(ctx: &Context, model_name: &str, tensor: Tensor) -> RpcResult<InferenceOutput> {
+/// This function is an example of a "router" that maps a user preference label to a model and link name,
+/// to provide a layer of abstraction so that the front-end doesn't need to know the names
+/// of the actual models, and the back-end can make dynamic decisions based on user needs,
+/// business model, server availability, etc. This is also an opportunity
+/// to apply blue/green or A/B test rules to allocate different percentage of traffic to a test model.
+fn choose_model_and_link(model_hint: &str) -> (&str, &str) {
+    const LOCAL_FAST: &str = "mobilenetv27";
+    const SERVER_ACCURATE: &str = "resnet152v27";
+
+    match model_hint {
+        "privacy" => (LOCAL_FAST, DEFAULT_LINK),
+        "latency" => (LOCAL_FAST, DEFAULT_LINK),
+        "accuracy" => (SERVER_ACCURATE, DEFAULT_LINK),
+        "default" => (LOCAL_FAST, DEFAULT_LINK),
+        _ => (model_hint, DEFAULT_LINK),
+    }
+}
+
+async fn predict(
+    ctx: &Context,
+    model_name: &str,
+    link_name: &str,
+    tensor: Tensor,
+) -> RpcResult<InferenceOutput> {
     debug!("Deserialized input tensor: {:?}", tensor);
 
     let input = InferenceInput {
@@ -284,7 +314,8 @@ async fn predict(ctx: &Context, model_name: &str, tensor: Tensor) -> RpcResult<I
         tensor,
     };
 
-    let mls = MlInferenceSender::new();
+    // unwrap() ok because new_with_link never fails
+    let mls = MlInferenceSender::new_with_link(link_name).unwrap();
     mls.predict(ctx, &input).await
 }
 

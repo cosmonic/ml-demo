@@ -1,6 +1,6 @@
 # Makefile for inferenceapi
 
-PROJECT  = inferenceapi
+PROJECT  = ml_inferenceapi
 VERSION  = $(shell cargo metadata --no-deps --format-version 1 | jq -r '.packages[] .version' | head -1)
 REVISION = 0
 # list of all contract claims for actor signing (space-separated)
@@ -17,7 +17,7 @@ PUSH_REG_CMD = wash reg push --insecure $(REG_URL)
 # friendly name for the actor
 ACTOR_NAME = "inferenceapi"
 # optional call alias for actor
-# ACTOR_ALIAS=nickname
+ACTOR_ALIAS = "inferenceapi"
 
 include ./actor.mk
 

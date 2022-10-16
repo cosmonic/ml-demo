@@ -1,12 +1,12 @@
 [package]
-name = "mnistpreprocessor"
+name = "ml-mnistpreprocessor"
 version = "0.1.0"
 authors = [ "" ]
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
-name = "mnistpreprocessor"
+name = "ml_mnistpreprocessor"
 
 [dependencies]
 futures = "0.3"
@@ -21,3 +21,4 @@ image = { version = "0.24", default-features = false, features = ["jpeg", "png",
 # Optimize for small code size
 lto = true
 opt-level = "s"
+strip = true
