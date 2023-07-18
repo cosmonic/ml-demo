@@ -1,22 +1,16 @@
-!/usr/bin/env bash
+#!/usr/bin/env bash
 set -e
 
-_DIR=$(dirname ${BASH_SOURCE[0]})
+_DIR=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
 
 show_help() {
 cat <<_SHOW_HELP
-  This program runs the mlinference api. Useful commands:
+  This program runs the ml inference demo. Useful commands:
 
-  Basics:
+   $0 load-models                  - start bindle server and load models (run this _before_ 'all')
    $0 all                          - run everything
    $0 wipe                         - stop everything and erase all secrets
 
-  Bindle:
-   $0 bindle-start                 - set parameters and start the bindle server
-   $0 bindle-create                - upload an invoice and corresponding parcels
-   $0 bindle-stop                  - kill all bindle instances
-
-  Host/actor controls:
    $0 inventory                    - show host inventory
 
 Custom environment variables and paths should be set in ${_DIR}/env
@@ -30,15 +24,16 @@ _SHOW_HELP
 ## ---------------------------------------------------------------
 
 WASH=${WASH:-wash}
+WASMCLOUD_HOST=${WASMCLOUD_HOST:-wasmcloud}
+WASMCLOUD_JS_DOMAIN=${WASMCLOUD_JS_DOMAIN:-cosmonic}
 
 check=$(printf '\342\234\224\n' | iconv -f UTF-8)
 
-# define BINDLE, BINDLE_SERVER, BINDLE_URL, RUST_LOG, WASMCLOUD_HOST_HOME
-if [ ! -f $_DIR/env ]; then
+if [ ! -f "$_DIR/env" ]; then
     echo "Missing $_DIR/env file"
     exit 1
 fi
-source $_DIR/env
+source "$_DIR/env"
 
 
 # allow extra time to process RPC
@@ -46,22 +41,20 @@ export WASMCLOUD_RPC_TIMEOUT_MS=8000
 # enable verbose logging
 export WASMCLOUD_STRUCTURED_LOGGING_ENABLED=true
 export WASMCLOUD_STRUCTURED_LOG_LEVEL=debug
-export RUST_LOG=${RUST_LOG:-RUST_LOG=debug,hyper=info,oci_distribution=info,reqwest=info}
+#export RUST_LOG=${RUST_LOG:-RUST_LOG=debug,hyper=info,oci_distribution=info,reqwest=info}
 
 ##
 #   BINDLE
 ## 
 
-# do NOT touch unless you know what you do
-BINDLE_CONFIGURATION_SCRIPT="${_DIR}/../bindle/scripts/bindle_start.sh"
+BINDLE_START_SCRIPT="${_DIR}/../bindle/scripts/bindle_start.sh"
 BINDLE_CREATION_SCRIPT="${_DIR}/../bindle/scripts/bindle_create.sh"
 BINDLE_SHUTDOWN_SCRIPT="${_DIR}/../bindle/scripts/bindle_stop.sh"
 
 ##
 #   WASMCLOUD HOST
-##
-
 # (defined in env)
+##
 
 ##
 #   CAPABILITY PROVIDERS
@@ -69,16 +62,14 @@ BINDLE_SHUTDOWN_SCRIPT="${_DIR}/../bindle/scripts/bindle_stop.sh"
 
 # oci registry - as used by wash
 REG_SERVER=${HOST_DEVICE_IP}:5000
+
 # registry server as seen by wasmcloud host. use "registry:5000" if host is in docker
-#REG_SERVER_FROM_HOST=127.0.0.1:5000
 REG_SERVER_FROM_HOST=${HOST_DEVICE_IP}:5000
 
-HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.16.0
+HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.18.2
 HTTPSERVER_ID=VAG3QITQQ2ODAOWB5TTQSDJ53XK3SHBEIFNK4AYJ5RKAX2UNSCAPHA5M
-#HTTPSERVER_REF=${HOST_DEVICE_IP}:5000/v2/httpserver:0.15.1
+#HTTPSERVER_REF=${HOST_DEVICE_IP}:5000/v2/httpserver:0.18.2
 #HTTPSERVER_ID=VDWKHKPIIORJM4HBFHL2M7KZQD6KMSQ4TLJOCS6BIQTIT6S7E6TXGLIP
-
-MLINFERENCE_REF=${REG_SERVER}/v2/mlinference:0.3.2
 
 # actor to link to httpsrever. 
 INFERENCEAPI_ACTOR=${_DIR}/../actors/inferenceapi
@@ -108,17 +99,22 @@ ALL_SECRET_FILES="$SECRETS $CLUSTER_SEED"
 ## END CONFIGURATION
 ## ---------------------------------------------------------------
 
-host_start() {
-    echo "starting wasmCloud host .."
-    #export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
-    alacritty -t cosmo-up -e $HOME/bin/cosmo-up start_iex &
-    #alacritty -t wasmcloud-start -e $HOME/bin/wasmcloud start_iex &
-    #$WASMCLOUD_HOST_HOME/bin/wasmcloud_host daemon
+start_host () {
+    echo "starting nats server and wasmCloud host"
+    WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST} cosmo up
 }
 
-host_stop() {
-    $WASMCLOUD_HOST_HOME/bin/wasmcloud_host stop
+# stop the local host and all actors/providers
+stop_host() {
+
+    cosmo down
+
+    ps -ef | grep mlinference | grep -v grep | awk '{print $2}' | xargs -r kill
+    ps -ef | grep wasmcloud   | grep -v grep | awk '{print $2}' | xargs -r kill
+    killall -q -KILL wasmcloud_httpserver_default || true
+    killall -q -KILL wasmcloud_mlinference_default || true
 }
+
 
 # stop docker and wipe all data (database, nats cache, host provider/actors, etc.)
 wipe_all() {
@@ -128,18 +124,10 @@ WASMCLOUD_CLUSTER_SEED=
 WASMCLOUD_CLUSTER_SEED=
 __WIPE
 
-    docker-compose --env-file $SECRETS stop
-    docker-compose --env-file $SECRETS rm -f
+    stop_host
+    docker-compose --env-file $SECRETS rm -sf registry
 
     rm -f $ALL_SECRET_FILES
-
-    echo -n "going to stop wasmCloud host .."
-    host_stop || true
-
-    ps -ef | grep mlinference | grep -v grep | awk '{print $2}' | xargs -r kill
-    ps -ef | grep wasmcloud   | grep -v grep | awk '{print $2}' | xargs -r kill
-    killall --quiet -KILL wasmcloud_httpserver_default || true
-    killall --quiet -KILL wasmcloud_mlinference_default || true
 
     ${WASH} drain all
 
@@ -153,8 +141,8 @@ create_seed() {
 }
 
 create_secrets() {
-    root_pass=$($MKPASS)
-    app_pass=$($MKPASS)
+    #root_pass=$($MKPASS)
+    #app_pass=$($MKPASS)
 
     cluster_seed=$(create_seed Cluster)
     echo $cluster_seed >$CLUSTER_SEED
@@ -169,55 +157,34 @@ __SECRETS
 
 start_bindle() {
     printf "\n[bindle-server startup]\n"
-
-    if [ -z "$BINDLE_SERVER" ] || [ ! -x $BINDLE_SERVER ]; then
-      echo "You must define BINDLE_HOME or BINDLE_SERVER"
-      exit 1
-    fi
-    echo "BINDLE_SERVER is set to '${BINDLE_SERVER}'"
-
-    if [ -z "$BINDLE_URL" ];  then
-      echo "You must define BINDLE_URL"
-      exit 1
-    fi
-    echo "BINDLE_URL is set to '${BINDLE_URL}'"
-
-    eval '"$BINDLE_CONFIGURATION_SCRIPT"'
+    ML_BINDLE_ADDR=$ML_BINDLE_ADDR \
+        BINDLE_DIRECTORY=$ML_BINDLE_DIR \
+        BINDLE_KEYRING=$ML_BINDLE_KEYRING \
+        $BINDLE_START_SCRIPT
 }
 
-stop_bindle() {
-    printf "\n[bindle-server shutdown]\n"
-
-    eval '"$BINDLE_SHUTDOWN_SCRIPT"'
-}
+#stop_bindle() {
+#    printf "\n[bindle-server shutdown]\n"
+#    bash "$BINDLE_SHUTDOWN_SCRIPT"
+#}
 
 create_bindle() {   
-    start_bindle
-
     printf "\n[bindle creation]\n"
-
-    if [ -z "$BINDLE" ] || [ ! -x $BINDLE ]; then
-      echo "You must define BINDLE_HOME or BINDLE"
-      exit 1
-    fi
-    eval '"$BINDLE_CREATION_SCRIPT"'
+    BINDLE_URL=$ML_BINDLE_URL \
+        BINDLE_DIRECTORY=$ML_BINDLE_DIR \
+        BINDLE_KEYRING=$ML_BINDLE_KEYRING \
+        $BINDLE_CREATION_SCRIPT
 }
 
 # get the host id (requires wasmcloud to be running)
 host_id() {
-    ${WASH} ctl get hosts -o json | jq -r ".hosts[0].id"
+    ${WASH} get hosts -o json | jq -r ".hosts[0].id"
 }
 
-# push capability provider
-push_capability_provider() {
-    echo "\npushing capability provider '${MLINFERENCE_REF}' to local registry .."
-    
-    export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
-
-    ${WASH} reg push $MLINFERENCE_REF ${_DIR}/../providers/mlinference/build/mlinference.par.gz --insecure
-
-    #echo "\npushing capability provider '${HTTPSERVER_REF}' to local registry .."
-    #${WASH} reg push $HTTPSERVER_REF ${_DIR}/../../../capability-providers/httpserver-rs/build/httpserver.par.gz --insecure
+# build and push capability provider
+push_providers() {
+    echo "\npushing capability provider mlinference to local registry .."
+    make -C ${_DIR}/../providers/mlinference all push
 }
 
 # start docker services
@@ -231,7 +198,7 @@ start_services() {
 
     echo "starting containers with nats and registry .."
 
-    docker-compose --env-file $SECRETS up -d
+    docker-compose --env-file $SECRETS up -d registry
     # give things time to start
     
     sleep 4
@@ -260,8 +227,9 @@ start_actors() {
     _here=$PWD
     cd ${_DIR}/../actors
     for i in */; do
-        if [ -f $i/Makefile ]; then
-            make HOST_DEVICE_IP=${HOST_DEVICE_IP} -C $i build push start
+        if [ -f $i/wasmcloud.toml ]; then
+            (cd $i && wash build && cosmo launch)
+            #make HOST_DEVICE_IP=${HOST_DEVICE_IP} -C $i build push start
         fi
     done
     cd $_here
@@ -270,18 +238,34 @@ start_actors() {
 # start wasmcloud capability providers
 # idempotent
 start_providers() {
-    local _host_id=$(host_id)
 
-    # make sure inference provider is built
-    make -C ${_DIR}/../providers/mlinference all
+    CONFIG_JSON=$(mktemp)
+cat >$CONFIG_JSON.tmp <<__JSON
+{
+ "bindle_url": "$ML_BINDLE_URL",
+ "bindle_keyring": "$ML_BINDLE_KEYRING"
+}
+__JSON
+   tr -d '\r\n' <$CONFIG_JSON.tmp >$CONFIG_JSON
 
-    echo "starting capability provider '${MLINFERENCE_REF}' from registry .."
-    ${WASH} ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 32000
+    VERSION=$(cd ../providers/mlinference && cargo metadata --no-deps --format-version 1 | jq -r '.packages[] .version' | head -1)
+    echo "starting capability provider mlinference:$VERSION from registry with config $CONFIG_JSON"
 
-    echo "starting capability provider '${HTTPSERVER_REF}' from registry .."
-    ${WASH} ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id # --timeout-ms 20000
-    #cd ../../../capability-providers/httpserver-rs && make push && make start
-    #${WASH} ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 32000
+    STARGATE_HOST=$(wash get hosts -o json | jq -r '.hosts | select(.[] | .labels | contains({"stargate": "true"}))[0] | .id')
+    if [ -z "$STARGATE_HOST" ]; then
+       echo "could not find stargate host - can't start provider"
+       exit 1
+    fi
+
+  	$WASH start provider \
+       --host-id $STARGATE_HOST \
+       --config-json "$CONFIG_JSON" \
+       "$REG_SERVER/v2/mlinference:$VERSION"
+    
+    echo "starting http server capability provider"
+    ${WASH} start provider \
+        --host-id $STARGATE_HOST \
+        $HTTPSERVER_REF
 }
 
 # base-64 encode file into a string
@@ -292,29 +276,29 @@ b64_encode_file() {
 # link actors with providers
 # idempotent
 link_providers() {
-    local _host_id=$(host_id)
-    local _actor_id
+    local inference_api_id
+    local image_ui_id
     local _a
 
     # link inferenceapi actor to http server, so it can be curl'd directly
-    _actor_id=$(make -C $INFERENCEAPI_ACTOR --silent actor_id)
-    ${WASH} ctl link put $_actor_id $HTTPSERVER_ID wasmcloud:httpserver address=$INFERENCE_ADDR 
-
-    # link image-ui actor to http server on its own port
-    _actor_id=$(make -C $IMAGE_UI_ACTOR --silent actor_id)
-    ${WASH} ctl link put $_actor_id $HTTPSERVER_ID wasmcloud:httpserver address=$IMAGE_UI_ADDR 
+    inference_api_id=$(make -C $INFERENCEAPI_ACTOR --silent actor_id)
+    ${WASH} link put --timeout-ms 4000 $inference_api_id $HTTPSERVER_ID wasmcloud:httpserver address=$INFERENCE_ADDR 
 
     # use locally-generated id, since mlinference provider isn't published yet
-    MLINFERENCE_ID=$(${WASH} par inspect -o json ${_DIR}/../providers/mlinference/build/mlinference.par.gz | jq -r '.service')
+    MLINFERENCE_ID=$(${WASH} inspect -o json ${_DIR}/../providers/mlinference/build/mlinference.par.gz | jq -r '.service')
 
     # link inferenceapi actor to mlinference provider
-    _actor_id=$(make -C $INFERENCEAPI_ACTOR --silent actor_id)
-    ${WASH} ctl link put $_actor_id $MLINFERENCE_ID     \
-        wasmcloud:mlinference config_b64=$(b64_encode_file $MODEL_CONFIG )
+    ${WASH} link put --timeout-ms 4000 $inference_api_id $MLINFERENCE_ID wasmcloud:mlinference "config_b64=$(b64_encode_file $MODEL_CONFIG)"
+
+    # link image-ui actor to http server on its own port
+    image_ui_id=$(make -C $IMAGE_UI_ACTOR --silent actor_id)
+    ${WASH} link put --timeout-ms 4000 $image_ui_id $HTTPSERVER_ID wasmcloud:httpserver address=$IMAGE_UI_ADDR 
 }
 
-show_inventory() {
-    ${WASH} ctl get inventory $(host_id)
+show_inventory() {    
+    for h in $(wash get hosts -o json | jq -r '.hosts[] | .id'); do
+         ${WASH} get inventory $h
+    done
 }
 
 
@@ -335,8 +319,8 @@ run_all() {
     stop_registry
 
     # stop services if they were leftover
-    killall --quiet -KILL wasmcloud_httpserver_default || true
-    killall --quiet -KILL wasmcloud_mlinference_default || true
+    killall -q -KILL wasmcloud_httpserver_default || true
+    killall -q -KILL wasmcloud_mlinference_default || true
 
 
     # make sure we have all prerequisites installed
@@ -359,18 +343,18 @@ run_all() {
         start_services
 
         # start host
-        host_start
+        start_host 
         sleep 10 # make sure host is started before next step
     fi
 
-    # push capability provider to local registry
-    push_capability_provider
+    # build inference capability provider and push to local registry
+    push_providers
 
     # build, push, and start all actors
     start_actors
     sleep 2
 
-    # start capability providers: httpserver and sqldb 
+    # start capability providers: inference and httpserver 
     start_providers
     sleep 2
 
@@ -387,13 +371,14 @@ case $1 in
     start ) start_services ;;
     inventory ) show_inventory ;;
     bindle-start | start-bindle ) start_bindle ;;
-    bindle-stop | stop-bindle ) stop_bindle ;;
-    bindle-create | create-bindle ) create_bindle ;;
+    #bindle-stop | stop-bindle ) stop_bindle ;;
+    load-models | bindle-create | create-bindle ) create_bindle ;;
     start-actors ) start_actors ;;
+    push-providers ) push_providers ;;
     start-providers ) start_providers ;;
     link-providers | link-actors ) link_providers ;;
-    host-start ) shift; host_start $@ ;;
-    run-all | all ) shift; run_all $@ ;;
+    start-host | host-start ) shift; start_host "$@" ;;
+    run-all | all ) shift; run_all "$@" ;;
 
     * ) show_help && exit 1 ;;
 
