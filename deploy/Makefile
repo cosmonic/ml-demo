@@ -7,6 +7,6 @@ docker-start:
 	$(MAKE) start REG_SERVER=registry:5000
 
 inventory:
-	wash ctl get inventory $(shell wash ctl get hosts -o json | jq -r ".hosts[0].id")
+	wash get inventory $(shell wash get hosts -o json | jq -r ".hosts[0].id")
 
 .PHONY: all push start test clean

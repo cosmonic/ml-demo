@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # customize environment, and system-specific urls and file paths
 # not that changes to this file will not be tracked.
 # This behavior may be configured with 
@@ -6,27 +7,34 @@
 #   git update-index --no-assume-unchanged deploy/env
 # see also https://stackoverflow.com/questions/3319479/can-i-git-commit-a-file-and-ignore-its-content-changes
 
-export RUST_LOG=debug,hyper=info,oci_distribution=info,reqwest=info
+#export RUST_LOG=debug,hyper=info,oci_distribution=info,reqwest=info
+export RUST_LOG=info,async_nats=warn
 export HOST_DEVICE_IP=127.0.0.1
-export BINDLE_HOME="$HOME/git/bindle"
-export BINDLE="$BINDLE_HOME/target/debug/bindle"
-export BINDLE_SERVER="$BINDLE_HOME/target/debug/bindle-server"
-export WASMCLOUD_HOST_HOME="$HOME/opt/wasmcloud"
 
+# set to path of bindle and bindle server (tested with v0.9.1)
+# Install with this command:
+#   cargo install --features=cli,default --bins --git https://github.com/deislabs/bindle
+export BINDLE="$HOME/.cargo/bin/bindle"
+export BINDLE_SERVER="$HOME/.cargo/bin/bindle-server"
+
+# use distinct variable names for bindle to keep it isolated from cosmo bindle
+_DIR=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
+export ML_BINDLE_DIR=$_DIR/../bindle/data
+mkdir -p "$ML_BINDLE_DIR"
+
+export ML_BINDLE_ADDR=127.0.0.1:23100
+export ML_BINDLE_URL=http://$ML_BINDLE_ADDR/v1/
+export ML_BINDLE_KEYRING=$_DIR/keyring.toml
 
 # define the IP address of the host 
 #export HOST_DEVICE_IP=192.168.178.24
 
 if [ -z "${HOST_DEVICE_IP}" ] 
 then 
-  echo -n "HOST_DEVICE_IP is unset - " 
-  echo "assumption: host is localhost"
+  echo "HOST_DEVICE_IP is unset, using 127.0.0.1" 
   export HOST_DEVICE_IP=${HOST_DEVICE_IP:-127.0.0.1}
 else 
   echo "HOST_DEVICE_IP is set to '$HOST_DEVICE_IP'"
-
-  export BINDLE_IP_ADDRESS_PORT=${HOST_DEVICE_IP}:8080
-  echo "BINDLE_IP_ADDRESS_PORT is set to '$BINDLE_IP_ADDRESS_PORT'"
 fi
 
 # define the IP address of the (remote) target device 
@@ -44,28 +52,9 @@ else
   echo "WASMCLOUD_CTL_HOST is set to '$WASMCLOUD_CTL_HOST'"
 fi
 
-#export BINDLE_URL=${BINDLE_URL:-http://localhost:8080/v1/}
-#export BINDLE_URL=${BINDLE_URL:-http://192.168.178.24:8080/v1/}
-export BINDLE_URL=${BINDLE_URL:-http://${HOST_DEVICE_IP}:8080/v1/}
-echo "BINDLE_URL is set to '${BINDLE_URL}'"
-
+echo "BINDLE_URL for models is set to '${ML_BINDLE_URL}'"
 echo "RUST_LOG is set to '${RUST_LOG}'"
 
-# either define BINDLE_HOME (to the git folder),
-# or define BINDLE and BINDLE_SERVER to the paths to the compiled executables
-export BINDLE_HOME=${BINDLE_HOME:-$HOME/dev/rust/bindle}
-echo "BINDLE_HOME is set to '${BINDLE_HOME}'"
-
-if [ -z "$BINDLE" ] && [ -n "$BINDLE_HOME" ]; then
-  export BINDLE=${BINDLE_HOME}/target/debug/bindle
-  echo "BINDLE is set to '${BINDLE}'"
-fi
-if [ -z "$BINDLE_SERVER" ] && [ -n "$BINDLE_HOME" ]; then
-  export BINDLE_SERVER=${BINDLE_HOME}/target/debug/bindle-server
-  echo "BINDLE_SERVER is set to '${BINDLE_SERVER}'"
-fi
-
-# installation directory of wasmcloud host
-export WASMCLOUD_HOST_HOME=${WASMCLOUD_HOST_HOME:-$HOME/dev/wasmcloud/wasmCloudHost}
-echo "WASMCLOUD_HOST_HOME is set to '${WASMCLOUD_HOST_HOME}'"
+# installation directory of wasmcloud host (bin)
+#echo "WASMCLOUD_HOST is set to '${WASMCLOUD_HOST}'"
 
