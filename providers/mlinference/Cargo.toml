@@ -11,7 +11,7 @@ tflite = [ "dep:tflite", "edgetpu" ]
 [dependencies]
 async-trait = "0.1"
 base64 = "0.13"
-bindle = "0.8.1"
+bindle = "0.9.1"
 byteorder = "1.4"
 log = "0.4"
 ndarray = "0.15"

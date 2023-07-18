@@ -25,16 +25,11 @@ pub type ModelName = String;
 pub type ModelZoo = HashMap<ModelName, ModelContext>;
 pub type Engine = Arc<Box<dyn InferenceEngine + Send + Sync>>;
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Hash)]
 pub enum InferenceFramework {
+    #[default]
     Tract,
     TfLite,
-}
-
-impl Default for InferenceFramework {
-    fn default() -> Self {
-        InferenceFramework::Tract
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -47,8 +42,8 @@ pub struct ModelContext {
     pub graph: Graph,
 }
 
-impl ModelContext {
-    pub fn default() -> ModelContext {
+impl Default for ModelContext {
+    fn default() -> Self {
         ModelContext {
             bindle_url: Default::default(),
             graph_encoding: Default::default(),
@@ -58,7 +53,9 @@ impl ModelContext {
             graph: Default::default(),
         }
     }
+}
 
+impl ModelContext {
     /// load metadata
     pub fn load_metadata(&mut self, metadata: ModelMetadata) -> Result<&ModelContext, MlError> {
         self.graph_encoding = metadata.graph_encoding;
