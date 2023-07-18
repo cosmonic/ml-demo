@@ -1,0 +1,47 @@
+bindleVersion = "1.0.0"
+
+[bindle]
+name = "identity_model"
+version = "0.2.0"
+description = "My first bindle"
+authors = ["Christoph Brewing <finnfalter@gmail.com>"]
+
+[annotations]
+myname = "myvalue"
+
+[[parcel]]
+[parcel.label]
+sha256 = "eb68abfa54af414a6aa8ce2f7554c0076ad3833149b4fb5d99538578213fffd9"
+mediaType = "application/octet-stream"
+name = "identity_input_output.onnx"
+size = 112
+
+[parcel.conditions]
+memberOf = ["model"]
+
+[[parcel]]
+[parcel.label]
+sha256 = "cf87f4ee466b58f1f096185bfbb162d8a6f493dce760cfb157fbb6373ad87921"
+mediaType = "application/json"
+name = "identity_input_output.json"
+size = 189
+
+[parcel.conditions]
+memberOf = ["metadata"]
+
+[[group]]
+name = "model"
+required = true
+satisfiedBy = "allOf"
+
+[[group]]
+name = "metadata"
+required = true
+satisfiedBy = "allOf"
+
+[[signature]]
+by = "stevelr_mlinference"
+signature = "gFjB2dx9+AR69OljAmQ+F3Nm+TomlYcOmgWZM0EkGhrWk4cG5nIC8dJSPLlNp3/Jm9x08MkdG6K34xe5Q+gPAA=="
+key = "CbYMLLWCm0A+RCJLcqGA7mOCzRWrp4APrO0my2eGvN8="
+role = "creator"
+at = 1689703251

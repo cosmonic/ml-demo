@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-source $(dirname ${BASH_SOURCE[0]})/../../deploy/env
+_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
+source "$_DIR/../../deploy/env"
 
 if [ $# -eq 0 ]
   then

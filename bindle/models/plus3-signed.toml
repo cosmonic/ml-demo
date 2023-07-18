@@ -1,0 +1,47 @@
+bindleVersion = "1.0.0"
+
+[bindle]
+name = "plus3"
+version = "0.1.0"
+description = "plus3 is taken from tract repository"
+authors = ["Christoph Brewing <finnfalter@gmail.com>"]
+
+[annotations]
+myname = "myvalue"
+
+[[parcel]]
+[parcel.label]
+sha256 = "62e74a2654e501d876b8b28b81b3ed8b405c2b1d7c11daed39dd806215f345b9"
+mediaType = "application/octet-stream"
+name = "plus3.pb"
+size = 129
+
+[parcel.conditions]
+memberOf = ["model"]
+
+[[parcel]]
+[parcel.label]
+sha256 = "d80216dca082ab5f20541d6ff43130677a6119ca77557c4925ff6539a43e8455"
+mediaType = "application/json"
+name = "plus3.json"
+size = 179
+
+[parcel.conditions]
+memberOf = ["metadata"]
+
+[[group]]
+name = "model"
+required = true
+satisfiedBy = "allOf"
+
+[[group]]
+name = "metadata"
+required = true
+satisfiedBy = "allOf"
+
+[[signature]]
+by = "stevelr_mlinference"
+signature = "+KnrXrQKvAbUSoRP6O0+Fwx1jQVnU9Pxov8WE1JvBPe5hop2+ya7DO4YlVcCvoZ3vxKdztb92G1knpvjbFmDBQ=="
+key = "CbYMLLWCm0A+RCJLcqGA7mOCzRWrp4APrO0my2eGvN8="
+role = "creator"
+at = 1689703251
