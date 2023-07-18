@@ -41,7 +41,7 @@ This uses 'cosmo up', so you need a cosmonic account.
     ```
     (ignore deprecation warnings referring to "a future version of Rust")
 
-## Start services
+## Start host, actors, and providers
 
 It's best to start with a clean slate - no wasmcloud hosts running on your local machine
 
@@ -53,9 +53,8 @@ cd deploy
 ./run-demo.sh bindle-start
 ./run-demo.sh load-models
 
-# start your local server and install everything
+# start the host, actors, and providers, and link them
 ./run-demo.sh all
-  
 ```
 
 If there are no errors, the last command above should end with a host inventory showing 5 actors and 2 capability providers.
@@ -66,9 +65,10 @@ They should also show up on your cosmonic dashboard.
 open a web browser to http://127.0.0.1:8079/
 Select priority:Accuracy, model:Mobilenet v2.7,
 then select a picture with the "Browse" button.
-Sample images are located in mldemo/images
 
-(ignore the number images 0.png etc. They are for digit recognition demo)
+Sample images are located in ml-demo/images
+
+(ignore the number images 0.png etc. They are for a handwriting recognition demo)
 
 Whenever the image is changed, it is sent through the recognition pipeline.
 One quirk of this page is that a new evaluation is only triggered on change of the image. not any of the other fields, so if you want to use the same image with a different model, you need to change the model, then the image to something else, then change it back again.
