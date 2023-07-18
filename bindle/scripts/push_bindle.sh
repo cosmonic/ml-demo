@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-_DIR=$(dirname ${BASH_SOURCE[0]})
-source $(dirname ${BASH_SOURCE[0]})/../../deploy/env
+_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
+#source $(dirname ${BASH_SOURCE[0]})/../../deploy/env
 
 if [ $# -lt 2 ]
   then
@@ -41,7 +41,6 @@ fi
 echo "ok"
 
 echo -n "pushing the invoice .. "
-echo "${BINDLE} push-invoice ${1}"
 $BINDLE push-invoice $1
 
 echo
@@ -53,10 +52,10 @@ do
     echo "model:     $MODEL_IDENTIFIER"
     echo "parcel:    $PARCEL"
     echo -n "pushing the parcel .. "
-    echo "${BINDLE} push-file -m ${MIME_TYPE} ${MODEL_IDENTIFIER} ${PARCEL}"
-    $BINDLE push-file -m $MIME_TYPE $MODEL_IDENTIFIER ${_DIR}/$PARCEL
+    echo "${BINDLE} push-file -m ${MIME_TYPE} ${MODEL_IDENTIFIER} $_DIR/../models/${PARCEL}"
+    $BINDLE push-file -m $MIME_TYPE $MODEL_IDENTIFIER "$_DIR/../models/$PARCEL"
     echo 
-    $BINDLE info $MODEL_IDENTIFIER
-    echo
+    #$BINDLE info $MODEL_IDENTIFIER
+    #echo
 done < <(tail -n +2 $2)
 

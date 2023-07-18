@@ -1,18 +1,13 @@
 #!/usr/bin/env bash
 
+BINDLE_SCRIPTS=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
+#source "${BINDLE_SCRIPTS}/../../deploy/env"
 
-_DIR=$(dirname ${BASH_SOURCE[0]})
-source $(dirname ${BASH_SOURCE[0]})/../../deploy/env
+for model in $(cat $BINDLE_SCRIPTS/../models/models.txt); do
+  $BINDLE_SCRIPTS/push_bindle.sh $BINDLE_SCRIPTS/../models/$model-signed.toml $BINDLE_SCRIPTS/../models/$model.csv
+done
 
-# in case there are multiple models to push append lines like the next one
-source ${_DIR}/push_bindle.sh ${_DIR}/../models/plus3.toml ${_DIR}/../models/plus3.csv
-source ${_DIR}/push_bindle.sh ${_DIR}/../models/identity_input_output.toml ${_DIR}/../models/identity_input_output.csv
-source ${_DIR}/push_bindle.sh ${_DIR}/../models/mobilenetv2-7.toml ${_DIR}/../models/mobilenetv2-7.csv
-source ${_DIR}/push_bindle.sh ${_DIR}/../models/squeezenetv1-1-7.toml ${_DIR}/../models/squeezenetv1-1-7.csv
-source ${_DIR}/push_bindle.sh ${_DIR}/../models/mobilenetv1_uint8_quant.toml ${_DIR}/../models/mobilenetv1_uint8_quant.csv
-source ${_DIR}/push_bindle.sh ${_DIR}/../models/mobilenetv2_uint8_quant.toml ${_DIR}/../models/mobilenetv2_uint8_quant.csv
-source ${_DIR}/push_bindle.sh ${_DIR}/../models/mobilenetv1_quant_edgetpu.toml ${_DIR}/../models/mobilenetv1_quant_edgetpu.csv
-if [ -f ${_DIR}/../models/resnet152-v2-7.onnx ]; then
-  source ${_DIR}/push_bindle.sh ${_DIR}/../models/resnet152-v2-7.toml ${_DIR}/../models/resnet152-v2-7.csv
-fi
+#if [ -f $BINDLE_SCRIPTS/../models/resnet152-v2-7.onnx ]; then
+#  source $BINDLE_SCRIPTS/push_bindle.sh $BINDLE_SCRIPTS/../models/resnet152-v2-7-signed.toml $BINDLE_SCRIPTS/../models/resnet152-v2-7.csv
+#fi
 
