@@ -152,12 +152,12 @@ target-file:
 
 # push par file to registry
 push: $(dest_par)
-	$(WASH) reg push $(oci_insecure) $(oci_url) $(dest_par)
+	$(WASH) push $(oci_insecure) $(oci_url) $(dest_par)
 
 # start provider
 start:
-	$(WASH) ctl start provider $(oci_url) \
-		--host-id $(shell $(WASH) ctl get hosts -o json | jq -r ".hosts[0].id") \
+	$(WASH) start provider $(oci_url) \
+		--host-id $(shell $(WASH) get hosts -o json | jq -r ".hosts[1].id") \
 		--link-name $(link_name) \
 		--timeout-ms 4000
 
@@ -166,7 +166,7 @@ inspect: $(dest_par)
 	$(WASH) par inspect $(dest_par)
 
 inventory:
-	$(WASH) ctl get inventory $(shell $(WASH) ctl get hosts -o json | jq -r ".hosts[0].id")
+	$(WASH) get inventory $(shell $(WASH) get hosts -o json | jq -r ".hosts[0].id")
 
 
 # clean: remove built par files, but don't clean if we're in top-level dir

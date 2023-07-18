@@ -353,7 +353,6 @@ pub type Result<T> = std::io::Result<T>;
 
 pub async fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
     data.chunks(4)
-        .into_iter()
         .map(|c| {
             let mut rdr = Cursor::new(c);
             rdr.read_f32::<LittleEndian>()

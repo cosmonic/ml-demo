@@ -1,7 +1,8 @@
 //! mlinference capability provider
 //!
-use bindle::client::{tokens::NoToken, Client};
-use std::{collections::HashMap, sync::Arc};
+use bindle::{client::{tokens::NoToken, Client},signature::{KeyRing,KeyRingLoader} };
+use serde::Deserialize;
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tokio::sync::RwLock;
 use wasmbus_rpc::provider::prelude::*;
 pub(crate) use wasmcloud_interface_mlinference::{
@@ -21,15 +22,21 @@ use wasmcloud_provider_mlinference::{
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_log::LogTracer::init()?;
 
-    provider_main(
-        MlInferenceProvider::default(),
+    let host_data = load_host_data().map_err(|e| {
+        eprintln!("error loading host data: {}", &e.to_string());
+        Box::new(e)
+    })?;
+    let settings = get_settings(host_data.config_json.as_ref().map(|x| x.as_str())
+        .unwrap_or_else( ||  "Missing config_json")
+    )?;
+    provider_start(
+        MlInferenceProvider {
+            settings,
+            ..Default::default()
+        },
+        host_data,
         Some("mlinference".to_string()),
     )?;
-
-    if std::env::var("BINDLE_URL").is_err() {
-        log::error!("No 'BINDLE_URL' defined, verify your bindle url.");
-        return Err("No 'BINDLE_URL' defined, verify your bindle url.".into());
-    }
 
     eprintln!("mlinference provider exiting");
     Ok(())
@@ -61,6 +68,8 @@ struct MlInferenceProvider {
     /// InferenceEngine defines common behavior
     /// GraphEncoding defines a model's encoding.
     engines: Arc<RwLock<HashMap<InferenceFramework, Engine>>>,
+
+    settings: MlInferenceSettings,
 }
 
 /// use default implementations of provider message handlers
@@ -87,7 +96,7 @@ impl ProviderHandler for MlInferenceProvider {
         };
 
         for (_, context) in model_zoo.iter() {
-            let engine = match self.get_engine(&context).await {
+            let engine = match self.get_engine(context).await {
                 Ok(v) => v,
                 Err(_) => {
                     return;
@@ -100,6 +109,29 @@ impl ProviderHandler for MlInferenceProvider {
         }
 
         actor_lock.remove(actor_id);
+    }
+}
+
+#[derive(Clone, Default, Deserialize)]
+struct MlInferenceSettings {
+    #[serde(alias = "BINDLE_URL")]
+    bindle_url: String,
+    #[serde(alias = "BINDLE_KEYRING")]
+    bindle_keyring: PathBuf,
+}
+
+fn get_settings(config_json: &str) -> Result<MlInferenceSettings, RpcError> {
+    let settings: MlInferenceSettings = serde_json::from_str(config_json).map_err(|e| {
+            RpcError::Deser(format!("invalid config_json in provider configuration: {e}"))
+        })?;
+    if !settings.bindle_keyring.is_file() {
+        Err(RpcError::Other(
+            "bindle_keyring must be a valid file".into(),
+        ))
+    } else if settings.bindle_url.is_empty() {
+        Err(RpcError::Other("bindle_url is invalid".into()))
+    } else {
+        Ok(settings)
     }
 }
 
@@ -129,10 +161,12 @@ impl MlInferenceProvider {
             &model_zoo
         );
 
+        let kr : KeyRing = self.settings.bindle_keyring.load().await
+            .map_err(|e| RpcError::Other(format!("Invalid keyring file {}: {e}", &self.settings.bindle_keyring.display())))?;
         let bindle_client: Client<NoToken> =
-            BindleLoader::provide("BINDLE_URL").await.map_err(|error| {
-                log::error!("put_link_sub() no 'BINDLE_URL' found");
-                RpcError::ProviderInit(format!("{}", error))
+            Client::new(&self.settings.bindle_url, NoToken, Arc::new(kr)).map_err(|_| {
+                log::error!("Bindle Url invalid!");
+                RpcError::Other("Bindle url invalid".into())
             })?;
 
         log::debug!("put_link_sub() - NOT done yet");
@@ -170,7 +204,7 @@ impl MlInferenceProvider {
 
             // each link definition may address a different target
             // such that it may be necessary to support multiple engines.
-            let engine = self.get_or_else_set_engine(&context).await?;
+            let engine = self.get_or_else_set_engine(context).await?;
 
             let graph: Graph = engine
                 .load(&model_data_bytes)
@@ -306,7 +340,7 @@ impl MlInferenceProvider {
                     None => {
                         let feedback = engines_lock.insert(
                             InferenceFramework::Tract,
-                            Arc::new(Box::new(TractEngine::default())),
+                            Arc::new(Box::<TractEngine>::default()),
                         );
                         log::debug!("get_or_else_set_engine() - Onnx/Tensorflow engine selected and created for '{}'.", context.bindle_url);
 

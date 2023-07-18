@@ -1,6 +1,10 @@
 //use crate::{BindlePath};
 use crate::{ExecutionTarget, GraphEncoding};
-use bindle::client::{tokens::NoToken, Client};
+use bindle::{
+    client::{tokens::NoToken, Client},
+    verification::VerifiedInvoice,
+    Invoice,
+};
 use serde::{Deserialize, Serialize};
 use thiserror::Error as ThisError;
 
@@ -49,6 +53,7 @@ pub enum Error {
 pub struct BindleLoader {}
 
 impl BindleLoader {
+    /*
     /// provide
     pub async fn provide(bindle_url: &str) -> BindleResult<Client<NoToken>> {
         // init the connection to bindle
@@ -64,6 +69,7 @@ impl BindleLoader {
 
         Ok(bindle_client)
     }
+    */
 
     /// get model and metadata
     pub async fn get_model_and_metadata(
@@ -74,11 +80,12 @@ impl BindleLoader {
             log::error!("Bindle Invoice not found!");
             BindleError::BindleInvoiceNotFoundError(bindle_url.to_string())
         })?;
-
-        let parcels = invoice.parcel.ok_or_else(|| {
-            log::error!("Bindle Parcel not found!");
-            BindleError::BindleParcelNotFoundError(bindle_url.to_string())
-        })?;
+        let parcels = <VerifiedInvoice<Invoice> as Into<Invoice>>::into(invoice)
+            .parcel
+            .ok_or_else(|| {
+                log::error!("Bindle Parcel not found!");
+                BindleError::BindleParcelNotFoundError(bindle_url.to_string())
+            })?;
 
         let model_parcel = BindleLoader::get_first_member_of(&parcels, "model").map_err(|_| {
             log::error!("No Bindle Parcel of group 'model'!");
