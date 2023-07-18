@@ -1,4 +1,4 @@
-name = "image-ui"
+name = "ml_image_ui"
 language = "rust"
 type = "actor"
 version = "0.1.0"

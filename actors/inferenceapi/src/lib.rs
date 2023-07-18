@@ -148,8 +148,6 @@ impl HttpServer for InferenceapiActor {
             }
 
             ("PUT", [model_name, "matches"]) => {
-                debug!("receiving POST(model, classes) ..");
-
                 // preprocess
                 let preprocessed = MlPreprocessingSender::to_actor(IMAGENET_PREPROCESS_ACTOR)
                     .convert(
@@ -160,7 +158,7 @@ impl HttpServer for InferenceapiActor {
                     )
                     .await?;
 
-                // validate
+                // ask router to pick best applicable engine
                 let (model_name, link_name) = choose_model_and_link(model_name);
                 validate(model_name, &preprocessed.tensor).await?;
 

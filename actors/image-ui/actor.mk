@@ -79,13 +79,13 @@ push: $(DIST_WASM)
 
 # tell host to start an instance of the actor
 start:
-	$(WASH) ctl start actor $(REG_URL) --timeout-ms 3000
+	$(WASH) start actor $(REG_URL)
 
 # NOT WORKING - live actor updates not working yet
 # update it (should update revision before doing this)
 #update:
 #	$(PUSH_REG_CMD) $(DIST_WASM)
-#	$(WASH) ctl update actor  \
+#	$(WASH) ctl update actor \
 #        $(shell $(WASH) ctl get hosts -o json | jq -r ".hosts[0].id") \
 #	    $(shell make --silent actor_id) \
 #	    $(REG_URL) --timeout-ms 3000
