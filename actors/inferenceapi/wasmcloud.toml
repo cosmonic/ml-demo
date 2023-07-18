@@ -1,0 +1,8 @@
+name = "ml_inferenceapi"
+language = "rust"
+type = "actor"
+version = "0.2.1"
+
+[actor]
+claims = ["wasmcloud:httpserver","wasmcloud:mlinference","wasmcloud:builtin:logging"]
+call_alias = "inferenceapi"
