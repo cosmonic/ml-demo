@@ -251,7 +251,9 @@ __JSON
     VERSION=$(cd ../providers/mlinference && cargo metadata --no-deps --format-version 1 | jq -r '.packages[] .version' | head -1)
     echo "starting capability provider mlinference:$VERSION from registry with config $CONFIG_JSON"
 
-    STARGATE_HOST=$(wash get hosts -o json | jq -r '.hosts | select(.[] | .labels | contains({"stargate": "true"}))[0] | .id')
+    CONSTELLATION_ID=$(cosmo whoami -o json | jq -r '.user.constellation_ids[0]')
+    STARGATE_HOST=$(nats req cosmo.ctl.${CONSTELLATION_ID}.ping.hosts '' -s 127.0.0.1:4223 | jq -r '.id')
+
     if [ -z "$STARGATE_HOST" ]; then
        echo "could not find stargate host - can't start provider"
        exit 1
