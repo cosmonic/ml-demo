@@ -10,3 +10,8 @@ bindle-server --unauthenticated -e \
     --keyring "$BINDLE_KEYRING" \
     --directory "$BINDLE_DIRECTORY" \
     --strategy CreativeIntegrity &
+
+$BINDLE \
+    --address "$ML_BINDLE_ADDR" \
+    --keyring "$BINDLE_KEYRING" \
+    keys fetch
