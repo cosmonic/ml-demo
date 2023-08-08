@@ -11,7 +11,9 @@ bindle-server --unauthenticated -e \
     --directory "$BINDLE_DIRECTORY" \
     --strategy CreativeIntegrity &
 
+sleep 2
+
 $BINDLE \
-    --address "$ML_BINDLE_ADDR" \
+    --server "http://$ML_BINDLE_ADDR/v1/" \
     --keyring "$BINDLE_KEYRING" \
     keys fetch
