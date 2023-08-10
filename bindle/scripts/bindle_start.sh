@@ -1,8 +1,19 @@
 #!/usr/bin/env bash
 
-source $(dirname ${BASH_SOURCE[0]})/../../deploy/env
+if [ -z "$ML_BINDLE_ADDR" ] || [ -z "$BINDLE_KEYRING" ] || [ -z "$BINDLE_DIRECTORY" ]; then
+  echo Missing bindle configuration. Required: ML_BINDLE_ADDR, BINDLE_KEYRING, BINDLE_DIRECTORY
+  exit 1
+fi
 
-# Do not forget to clean bindle's cache:
-rm -rf ~/.cache/bindle
+bindle-server --unauthenticated -e \
+    --address $ML_BINDLE_ADDR \
+    --keyring "$BINDLE_KEYRING" \
+    --directory "$BINDLE_DIRECTORY" \
+    --strategy CreativeIntegrity &
 
-$BINDLE_SERVER --directory ${HOME}/.bindle/bindles --unauthenticated &
+sleep 2
+
+$BINDLE \
+    --server "http://$ML_BINDLE_ADDR/v1/" \
+    --keyring "$BINDLE_KEYRING" \
+    keys fetch

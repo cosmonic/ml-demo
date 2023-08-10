@@ -1,0 +1,47 @@
+bindleVersion = "1.0.0"
+
+[bindle]
+name = "squeezenetv1-1-7"
+version = "0.1.0"
+description = "https://github.com/onnx/models/blob/main/vision/classification/squeezenet"
+authors = ["Christoph Brewing <finnfalter@gmail.com>"]
+
+[annotations]
+myname = "N/A"
+
+[[parcel]]
+[parcel.label]
+sha256 = "1eeff551a67ae8d565ca33b572fc4b66e3ef357b0eb2863bb9ff47a918cc4088"
+mediaType = "application/octet-stream"
+name = "squeezenetv1-1-7.onnx"
+size = 4956208
+
+[parcel.conditions]
+memberOf = ["model"]
+
+[[parcel]]
+[parcel.label]
+sha256 = "71d3d8466e9a906b285f7af08844def1fbea9138c99de103b34ef2ee8ec04b2b"
+mediaType = "application/json"
+name = "squeezenetv1-1-7.json"
+size = 197
+
+[parcel.conditions]
+memberOf = ["metadata"]
+
+[[group]]
+name = "model"
+required = true
+satisfiedBy = "allOf"
+
+[[group]]
+name = "metadata"
+required = true
+satisfiedBy = "allOf"
+
+[[signature]]
+by = "stevelr_mlinference"
+signature = "PKfS2bqG9ntHPdFQOfQeBvVzW12LL/1yD9nouKlExK8AqCYjZjSlKB6sczZdXToqedjjhgULm14a6ZkcR9vICA=="
+key = "CbYMLLWCm0A+RCJLcqGA7mOCzRWrp4APrO0my2eGvN8="
+role = "creator"
+at = 1689703251

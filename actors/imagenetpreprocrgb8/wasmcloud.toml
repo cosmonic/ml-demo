@@ -1,0 +1,8 @@
+name = "ml_imagenetpreprocrgb8"
+language = "rust"
+type = "actor"
+version = "0.1.0"
+
+[actor]
+claims = ["wasmcloud:mlpreprocessing","wasmcloud:builtin:logging"]
+call_alias = "mlinference/imagenetpreprocrgb8"

@@ -1,6 +1,10 @@
 //use crate::{BindlePath};
 use crate::{ExecutionTarget, GraphEncoding};
-use bindle::client::{tokens::NoToken, Client};
+use bindle::{
+    client::{tokens::NoToken, Client},
+    verification::VerifiedInvoice,
+    Invoice,
+};
 use serde::{Deserialize, Serialize};
 use thiserror::Error as ThisError;
 
@@ -49,6 +53,7 @@ pub enum Error {
 pub struct BindleLoader {}
 
 impl BindleLoader {
+    /*
     /// provide
     pub async fn provide(bindle_url: &str) -> BindleResult<Client<NoToken>> {
         // init the connection to bindle
@@ -57,59 +62,41 @@ impl BindleLoader {
             BindleError::NoBindleUrlDefinedError
         })?;
 
-        let bindle_client =
-            Client::new(&url, NoToken).map_err(|_| {
-                log::error!("Bindle Url invalid!");
-                BindleError::BindleUrlInvalidError
-            })?;
+        let bindle_client = Client::new(&url, NoToken).map_err(|_| {
+            log::error!("Bindle Url invalid!");
+            BindleError::BindleUrlInvalidError
+        })?;
 
         Ok(bindle_client)
     }
+    */
 
     /// get model and metadata
     pub async fn get_model_and_metadata(
         bindle_client: &Client<NoToken>,
         bindle_url: &str,
     ) -> BindleResult<(ModelMetadata, Vec<u8>)> {
-        let invoice = bindle_client
-            .get_invoice(bindle_url)
-            .await
-            .map_err(|_| {
-                log::error!("Bindle Invoice not found!");
-                BindleError::BindleInvoiceNotFoundError(bindle_url.to_string())
-            })?;
-
-        let parcels = invoice
+        let invoice = bindle_client.get_invoice(bindle_url).await.map_err(|_| {
+            log::error!("Bindle Invoice not found!");
+            BindleError::BindleInvoiceNotFoundError(bindle_url.to_string())
+        })?;
+        let parcels = <VerifiedInvoice<Invoice> as Into<Invoice>>::into(invoice)
             .parcel
             .ok_or_else(|| {
                 log::error!("Bindle Parcel not found!");
                 BindleError::BindleParcelNotFoundError(bindle_url.to_string())
             })?;
 
-        let model_parcel = BindleLoader::get_first_member_of(&parcels, "model")
-            .map_err(|_| {
-                log::error!("No Bindle Parcel of group 'model'!");
-                BindleError::BindleNoParcelOfGroupModelError
-            })?;
+        let model_parcel = BindleLoader::get_first_member_of(&parcels, "model").map_err(|_| {
+            log::error!("No Bindle Parcel of group 'model'!");
+            BindleError::BindleNoParcelOfGroupModelError
+        })?;
 
-        let metadata_parcel = BindleLoader::get_first_member_of(&parcels, "metadata")
-            .map_err(|_| {
+        let metadata_parcel =
+            BindleLoader::get_first_member_of(&parcels, "metadata").map_err(|_| {
                 log::error!("No Bindle Parcel of group 'metadata'!");
                 BindleError::BindleNoParcelOfGroupMetadataError
             })?;
-
-        let model_data_blob: Vec<u8> = bindle_client
-            .get_parcel(bindle_url, &model_parcel.label.sha256)
-            .await
-            .map_err(|_| {
-                log::error!("Bindle Parcel 'model' could not be fetched!");
-                BindleError::BindleParcelNotFetchedError(model_parcel.label.name.to_string())
-            })?;
-        log::info!(
-            "successfully downloaded model '{}' of size {}",
-            model_parcel.label.name,
-            model_data_blob.len()
-        );
 
         let metadata_blob: Vec<u8> = bindle_client
             .get_parcel(bindle_url, &metadata_parcel.label.sha256)
@@ -131,11 +118,33 @@ impl BindleLoader {
                 BindleError::BindleParsingMetadataError(format!("{}", error))
             })?;
 
+        if !crate::model_encoding_enabled(metadata.graph_encoding) {
+            let err = format!(
+                "Skipping model {}: graph type {:?} not enabled",
+                &metadata.model_name.unwrap_or_default(),
+                metadata.graph_encoding
+            );
+            log::error!("{}", &err);
+            return Err(BindleError::BindleModelNotEnabled(err));
+        }
+
+        let model_data_blob: Vec<u8> = bindle_client
+            .get_parcel(bindle_url, &model_parcel.label.sha256)
+            .await
+            .map_err(|_| {
+                log::error!("Bindle Parcel 'model' could not be fetched!");
+                BindleError::BindleParcelNotFetchedError(model_parcel.label.name.to_string())
+            })?;
+        log::info!(
+            "successfully downloaded model '{}' of size {}",
+            model_parcel.label.name,
+            model_data_blob.len()
+        );
+
         Ok((metadata, model_data_blob))
     }
 
     /// get first member of
-    //fn get_first_member_of(parcels: &Vec<bindle::Parcel>, group: &str) -> BindleResult<&bindle::Parcel> {
     fn get_first_member_of<'a>(
         parcels: &'a [bindle::Parcel],
         group: &'a str,
@@ -197,4 +206,7 @@ pub enum BindleError {
 
     #[error("Error parsing metadata {0}")]
     BindleParsingMetadataError(String),
+
+    #[error("Model is not enabled in this build {0}")]
+    BindleModelNotEnabled(String),
 }

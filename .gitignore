@@ -1,6 +1,8 @@
 .secrets
 /.idea
 /.vscode
+.DS_Store
+.cluster.nk
 
 **/html/
 

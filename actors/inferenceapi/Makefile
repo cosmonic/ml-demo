@@ -1,12 +1,12 @@
 # Makefile for inferenceapi
 
-PROJECT  = inferenceapi
+PROJECT  = ml_inferenceapi
 VERSION  = $(shell cargo metadata --no-deps --format-version 1 | jq -r '.packages[] .version' | head -1)
 REVISION = 0
 # list of all contract claims for actor signing (space-separated)
-CLAIMS   = wasmcloud:mlinference wasmcloud:httpserver wasmcloud:builtin:logging
+CLAIMS   = wasmcloud:builtin:logging wasmcloud:mlinference wasmcloud:httpserver 
 
-HOST_DEVICE_IP=${HOST_DEVICE_IP:-127.0.0.1}
+HOST_DEVICE_IP ?= 127.0.0.1
 
 # registry url for our actor
 REG_URL  = $(HOST_DEVICE_IP):5000/v2/$(PROJECT):$(VERSION)
@@ -17,7 +17,7 @@ PUSH_REG_CMD = wash reg push --insecure $(REG_URL)
 # friendly name for the actor
 ACTOR_NAME = "inferenceapi"
 # optional call alias for actor
-# ACTOR_ALIAS=nickname
+ACTOR_ALIAS = "inferenceapi"
 
 include ./actor.mk
 

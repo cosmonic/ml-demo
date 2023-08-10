@@ -1,0 +1,47 @@
+bindleVersion = "1.0.0"
+
+[bindle]
+name = "resnet152-v2-7"
+version = "0.1.0"
+description = "Resnet152 v2-7 onnx model"
+authors = ["Christoph Brewing <finnfalter@gmail.com>"]
+
+[annotations]
+myname = "N/A"
+
+[[parcel]]
+[parcel.label]
+sha256 = "40fb3f6dd313ba786a2c8077a0ef7d7b4afeda5d037365400d3a7fbc2b1bee64"
+mediaType = "application/octet-stream"
+name = "resnet152-v2-7.onnx"
+size = 241503848
+
+[parcel.conditions]
+memberOf = ["model"]
+
+[[parcel]]
+[parcel.label]
+sha256 = "dfe29ac7d28622c7518bbd3a9c6e36eff40da9fe27f9c4699e7650c6a56e850f"
+mediaType = "application/json"
+name = "resnet152-v2-7.json"
+size = 194
+
+[parcel.conditions]
+memberOf = ["metadata"]
+
+[[group]]
+name = "model"
+required = true
+satisfiedBy = "allOf"
+
+[[group]]
+name = "metadata"
+required = true
+satisfiedBy = "allOf"
+
+[[signature]]
+by = "stevelr_mlinference"
+signature = "Qd4GBy3zT74ym+ezUVYf+Z6mswlrIfP9uUzlRQjrDQTZzO36/3hyBo8VX2D/ZXMEpTtXgtlmZMc3Vo5ZdB5DBg=="
+key = "CbYMLLWCm0A+RCJLcqGA7mOCzRWrp4APrO0my2eGvN8="
+role = "creator"
+at = 1689703251

@@ -1,12 +1,14 @@
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use thiserror::Error as ThisError;
 use wasmcloud_interface_mlinference::{InferenceOutput, MlError, Status, Tensor, ValueType};
 
 mod bindle_loader;
-pub use bindle_loader::{BindleLoader, ModelMetadata};
+pub use bindle_loader::{BindleError, BindleLoader, ModelMetadata};
 
 pub mod inference;
+#[cfg(feature = "tflite")]
+pub use inference::TfLiteEngine;
 pub use inference::{
     bytes_to_f32_vec, f32_vec_to_bytes, ExecutionTarget, Graph, GraphEncoding,
     GraphExecutionContext, InferenceEngine, TractEngine,
@@ -21,6 +23,14 @@ pub(crate) use hashmap_ci::make_case_insensitive;
 pub type BindlePath = String;
 pub type ModelName = String;
 pub type ModelZoo = HashMap<ModelName, ModelContext>;
+pub type Engine = Arc<Box<dyn InferenceEngine + Send + Sync>>;
+
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Hash)]
+pub enum InferenceFramework {
+    #[default]
+    Tract,
+    TfLite,
+}
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct ModelContext {
@@ -32,8 +42,8 @@ pub struct ModelContext {
     pub graph: Graph,
 }
 
-impl ModelContext {
-    pub fn default() -> ModelContext {
+impl Default for ModelContext {
+    fn default() -> Self {
         ModelContext {
             bindle_url: Default::default(),
             graph_encoding: Default::default(),
@@ -43,7 +53,9 @@ impl ModelContext {
             graph: Default::default(),
         }
     }
+}
 
+impl ModelContext {
     /// load metadata
     pub fn load_metadata(&mut self, metadata: ModelMetadata) -> Result<&ModelContext, MlError> {
         self.graph_encoding = metadata.graph_encoding;
@@ -82,4 +94,66 @@ pub enum Error {
 
     #[error("provider startup: {0}")]
     Init(String),
+
+    #[error("model type is not configured in this build: {0}")]
+    ModelNotConfigured(String),
+}
+
+struct ModelStatus {
+    pub name: &'static str,
+    pub graph: GraphEncoding,
+    pub enabled: bool,
+}
+
+#[cfg(feature = "tflite")]
+const TFLITE_ENABLED: bool = true;
+#[cfg(not(feature = "tflite"))]
+const TFLITE_ENABLED: bool = false;
+
+/// this structure is intended to capture compile-time feature flags
+/// to make it easy to find out if model support is compiled in.
+/// The array should hold all possible model types, so that it's possible
+/// to find out if a model is a known type but not currently compiled in
+/// In the future, the *_enabled functions could be expanded to
+/// do more dynamic runtime checking
+const MODEL_KINDS: &[ModelStatus] = &[
+    ModelStatus {
+        name: "Onnx",
+        graph: GraphEncoding::Onnx,
+        enabled: true,
+    },
+    ModelStatus {
+        name: "TfLite",
+        graph: GraphEncoding::TfLite,
+        enabled: TFLITE_ENABLED,
+    },
+    ModelStatus {
+        name: "OpenVino",
+        graph: GraphEncoding::OpenVino,
+        enabled: true,
+    },
+    ModelStatus {
+        name: "Tensorflow",
+        graph: GraphEncoding::Tensorflow,
+        enabled: true,
+    },
+];
+
+/// returns true if the model graph encoding is supported
+pub fn model_encoding_enabled(enc: GraphEncoding) -> bool {
+    MODEL_KINDS
+        .iter()
+        .find(|m| m.graph == enc && m.enabled)
+        .is_some()
+}
+
+/// returns true if the model type is configured.
+/// Search is case-insensitive, and parameter can be snake care or camel case.
+/// Possible types are onnx, tflite, openvino, tensorflow
+pub fn model_type_enabled(model_type: &str) -> bool {
+    let camel = model_type.replace('_', "");
+    MODEL_KINDS
+        .iter()
+        .find(|m| m.name.eq_ignore_ascii_case(&camel) && m.enabled)
+        .is_some()
 }

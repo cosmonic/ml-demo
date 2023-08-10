@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+!/usr/bin/env bash
 set -e
 
 _DIR=$(dirname ${BASH_SOURCE[0]})
@@ -23,21 +23,30 @@ Custom environment variables and paths should be set in ${_DIR}/env
 _SHOW_HELP
 }
 
+# multitail -iw "~/opt/wasmcloud/tmp/log/erlang.log.*" 1
+
 ## ---------------------------------------------------------------
 ## START CONFIGURATION
 ## ---------------------------------------------------------------
 
+WASH=${WASH:-wash}
+
 check=$(printf '\342\234\224\n' | iconv -f UTF-8)
 
 # define BINDLE, BINDLE_SERVER, BINDLE_URL, RUST_LOG, WASMCLOUD_HOST_HOME
+if [ ! -f $_DIR/env ]; then
+    echo "Missing $_DIR/env file"
+    exit 1
+fi
 source $_DIR/env
+
 
 # allow extra time to process RPC
 export WASMCLOUD_RPC_TIMEOUT_MS=8000
 # enable verbose logging
-export WASMCLOUD_STRUCTURED_LOGGING_ENABLED=1
+export WASMCLOUD_STRUCTURED_LOGGING_ENABLED=true
 export WASMCLOUD_STRUCTURED_LOG_LEVEL=debug
-export RUST_LOG=debug
+export RUST_LOG=${RUST_LOG:-RUST_LOG=debug,hyper=info,oci_distribution=info,reqwest=info}
 
 ##
 #   BINDLE
@@ -64,18 +73,21 @@ REG_SERVER=${HOST_DEVICE_IP}:5000
 #REG_SERVER_FROM_HOST=127.0.0.1:5000
 REG_SERVER_FROM_HOST=${HOST_DEVICE_IP}:5000
 
-#HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.15.0
-#HTTPSERVER_ID=VAG3QITQQ2ODAOWB5TTQSDJ53XK3SHBEIFNK4AYJ5RKAX2UNSCAPHA5M
-HTTPSERVER_REF=${HOST_DEVICE_IP}:5000/v2/httpserver:0.15.1
-HTTPSERVER_ID=VDWKHKPIIORJM4HBFHL2M7KZQD6KMSQ4TLJOCS6BIQTIT6S7E6TXGLIP
+HTTPSERVER_REF=wasmcloud.azurecr.io/httpserver:0.16.0
+HTTPSERVER_ID=VAG3QITQQ2ODAOWB5TTQSDJ53XK3SHBEIFNK4AYJ5RKAX2UNSCAPHA5M
+#HTTPSERVER_REF=${HOST_DEVICE_IP}:5000/v2/httpserver:0.15.1
+#HTTPSERVER_ID=VDWKHKPIIORJM4HBFHL2M7KZQD6KMSQ4TLJOCS6BIQTIT6S7E6TXGLIP
 
-MLINFERENCE_REF=${REG_SERVER}/v2/mlinference:0.2.1
+MLINFERENCE_REF=${REG_SERVER}/v2/mlinference:0.3.2
 
 # actor to link to httpsrever. 
 INFERENCEAPI_ACTOR=${_DIR}/../actors/inferenceapi
 
+IMAGE_UI_ACTOR=${_DIR}/../actors/image-ui
+
 # http configuration file. use https_config.json to enable TLS
-HTTP_CONFIG=http_config.json
+INFERENCE_ADDR=0.0.0.0:8078
+IMAGE_UI_ADDR=0.0.0.0:8079
 
 MODEL_CONFIG=actor_config.json
 
@@ -96,8 +108,16 @@ ALL_SECRET_FILES="$SECRETS $CLUSTER_SEED"
 ## END CONFIGURATION
 ## ---------------------------------------------------------------
 
-host_cmd() {
-    $WASMCLOUD_HOST_HOME/bin/wasmcloud_host $@
+host_start() {
+    echo "starting wasmCloud host .."
+    #export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
+    alacritty -t cosmo-up -e $HOME/bin/cosmo-up start_iex &
+    #alacritty -t wasmcloud-start -e $HOME/bin/wasmcloud start_iex &
+    #$WASMCLOUD_HOST_HOME/bin/wasmcloud_host daemon
+}
+
+host_stop() {
+    $WASMCLOUD_HOST_HOME/bin/wasmcloud_host stop
 }
 
 # stop docker and wipe all data (database, nats cache, host provider/actors, etc.)
@@ -114,14 +134,14 @@ __WIPE
     rm -f $ALL_SECRET_FILES
 
     echo -n "going to stop wasmCloud host .."
-    host_cmd stop || true
+    host_stop || true
 
     ps -ef | grep mlinference | grep -v grep | awk '{print $2}' | xargs -r kill
     ps -ef | grep wasmcloud   | grep -v grep | awk '{print $2}' | xargs -r kill
     killall --quiet -KILL wasmcloud_httpserver_default || true
     killall --quiet -KILL wasmcloud_mlinference_default || true
 
-    wash drain all
+    ${WASH} drain all
 
     # clear bindle cache
     rm -rf ~/.cache/bindle ~/Library/Caches/bindle
@@ -129,7 +149,7 @@ __WIPE
 
 create_seed() {
     local _seed_type=$1
-    wash keys gen -o json $_seed_type | jq -r '.seed'
+    ${WASH} keys gen -o json $_seed_type | jq -r '.seed'
 }
 
 create_secrets() {
@@ -185,7 +205,7 @@ create_bindle() {
 
 # get the host id (requires wasmcloud to be running)
 host_id() {
-    wash ctl get hosts -o json | jq -r ".hosts[0].id"
+    ${WASH} ctl get hosts -o json | jq -r ".hosts[0].id"
 }
 
 # push capability provider
@@ -194,10 +214,10 @@ push_capability_provider() {
     
     export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
 
-    wash reg push $MLINFERENCE_REF ${_DIR}/../providers/mlinference/build/mlinference.par.gz --insecure
+    ${WASH} reg push $MLINFERENCE_REF ${_DIR}/../providers/mlinference/build/mlinference.par.gz --insecure
 
-    echo "\npushing capability provider '${HTTPSERVER_REF}' to local registry .."
-    wash reg push $HTTPSERVER_REF ${_DIR}/../../../capability-providers/httpserver-rs/build/httpserver.par.gz --insecure
+    #echo "\npushing capability provider '${HTTPSERVER_REF}' to local registry .."
+    #${WASH} reg push $HTTPSERVER_REF ${_DIR}/../../../capability-providers/httpserver-rs/build/httpserver.par.gz --insecure
 }
 
 # start docker services
@@ -213,13 +233,8 @@ start_services() {
 
     docker-compose --env-file $SECRETS up -d
     # give things time to start
-    sleep 5
-
-    echo "starting wasmCloud host .."
-
-    # start wasmCloud host in background
-    export WASMCLOUD_OCI_ALLOWED_INSECURE=${REG_SERVER_FROM_HOST}
-    host_cmd start
+    
+    sleep 4
 }
 
 # help preparing remote device
@@ -258,15 +273,15 @@ start_providers() {
     local _host_id=$(host_id)
 
     # make sure inference provider is built
-    #make -C ${_DIR}/../providers/mlinference all
+    make -C ${_DIR}/../providers/mlinference all
 
     echo "starting capability provider '${MLINFERENCE_REF}' from registry .."
-	wash ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 32000
+    ${WASH} ctl start provider $MLINFERENCE_REF --link-name default --host-id $_host_id --timeout-ms 32000
 
     echo "starting capability provider '${HTTPSERVER_REF}' from registry .."
-    #wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 15000
+    ${WASH} ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id # --timeout-ms 20000
     #cd ../../../capability-providers/httpserver-rs && make push && make start
-    wash ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 32000
+    #${WASH} ctl start provider $HTTPSERVER_REF --link-name default --host-id $_host_id --timeout-ms 32000
 }
 
 # base-64 encode file into a string
@@ -281,39 +296,48 @@ link_providers() {
     local _actor_id
     local _a
 
-    # link inferenceapi actor to http server
+    # link inferenceapi actor to http server, so it can be curl'd directly
     _actor_id=$(make -C $INFERENCEAPI_ACTOR --silent actor_id)
-    wash ctl link put $_actor_id $HTTPSERVER_ID     \
-        wasmcloud:httpserver config_b64=$(b64_encode_file $HTTP_CONFIG )
+    ${WASH} ctl link put $_actor_id $HTTPSERVER_ID wasmcloud:httpserver address=$INFERENCE_ADDR 
+
+    # link image-ui actor to http server on its own port
+    _actor_id=$(make -C $IMAGE_UI_ACTOR --silent actor_id)
+    ${WASH} ctl link put $_actor_id $HTTPSERVER_ID wasmcloud:httpserver address=$IMAGE_UI_ADDR 
 
     # use locally-generated id, since mlinference provider isn't published yet
-    MLINFERENCE_ID=$(wash par inspect -o json ${_DIR}/../providers/mlinference/build/mlinference.par.gz | jq -r '.service')
+    MLINFERENCE_ID=$(${WASH} par inspect -o json ${_DIR}/../providers/mlinference/build/mlinference.par.gz | jq -r '.service')
 
     # link inferenceapi actor to mlinference provider
     _actor_id=$(make -C $INFERENCEAPI_ACTOR --silent actor_id)
-    wash ctl link put $_actor_id $MLINFERENCE_ID     \
+    ${WASH} ctl link put $_actor_id $MLINFERENCE_ID     \
         wasmcloud:mlinference config_b64=$(b64_encode_file $MODEL_CONFIG )
 }
 
 show_inventory() {
-    wash ctl get inventory $(host_id)
+    ${WASH} ctl get inventory $(host_id)
 }
 
-# check config files
-check_files() {
 
-    for f in $HTTP_CONFIG; do
-        if [ ! -f $f ]; then
-            echo "missing file:$f"
-            exit 1
-        fi
-    done
+stop_registry() {
+    set +e
+    docker ps | grep registry:2 && docker compose stop registry
+    docker compose rm -f registry
+    set -e
+}
 
-	# check syntax of json files
-	jq < $HTTP_CONFIG >/dev/null
+start_registry() {
+    docker compose up -d registry
 }
 
 run_all() {
+
+    # turn off local registry
+    stop_registry
+
+    # stop services if they were leftover
+    killall --quiet -KILL wasmcloud_httpserver_default || true
+    killall --quiet -KILL wasmcloud_mlinference_default || true
+
 
     # make sure we have all prerequisites installed
     ${_DIR}/checkup.sh
@@ -321,7 +345,6 @@ run_all() {
     if [ ! -f $SECRETS ]; then
         create_secrets
     fi
-    check_files
 
     # start all the containers in case the target is localhost
     if [ "$TARGET_DEVICE_IP" != "127.0.0.1" ]; then
@@ -329,18 +352,15 @@ run_all() {
         prepare_remote_device
 
         # in case you do not run a local registry, switch it on
-        docker container start registry
+        start_registry
     else 
-        # in case you still run a local registry, switch it off
-        docker container stop registry
 
         echo "starting runtime, nats and registry on host"
         start_services
-    fi
 
-    # start host console to view logs
-    if [ "$1" = "--console" ] && [ -n "$TERMINAL" ]; then
-        $TERMINAL -e ./run.sh host attach &
+        # start host
+        host_start
+        sleep 10 # make sure host is started before next step
     fi
 
     # push capability provider to local registry
@@ -348,9 +368,11 @@ run_all() {
 
     # build, push, and start all actors
     start_actors
+    sleep 2
 
     # start capability providers: httpserver and sqldb 
     start_providers
+    sleep 2
 
     # link providers with actors
     link_providers
@@ -369,8 +391,8 @@ case $1 in
     bindle-create | create-bindle ) create_bindle ;;
     start-actors ) start_actors ;;
     start-providers ) start_providers ;;
-    link-providers ) link_providers ;;
-    host ) shift; host_cmd $@ ;;
+    link-providers | link-actors ) link_providers ;;
+    host-start ) shift; host_start $@ ;;
     run-all | all ) shift; run_all $@ ;;
 
     * ) show_help && exit 1 ;;

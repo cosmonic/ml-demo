@@ -1,0 +1,8 @@
+identity_input_output
+mobilenetv1_quant_edgetpu
+mobilenetv1_uint8_quant
+mobilenetv2-7
+mobilenetv2_uint8_quant
+plus3
+resnet152-v2-7
+squeezenetv1-1-7

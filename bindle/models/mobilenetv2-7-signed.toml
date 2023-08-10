@@ -1,0 +1,47 @@
+bindleVersion = "1.0.0"
+
+[bindle]
+name = "mobilenetv2-7"
+version = "0.1.0"
+description = "https://github.com/onnx/models/tree/main/vision/classification/mobilenet"
+authors = ["Christoph Brewing <finnfalter@gmail.com>"]
+
+[annotations]
+myname = "N/A"
+
+[[parcel]]
+[parcel.label]
+sha256 = "0e7c0aa4bc74650386fa1d2c84705753de7c2bdb21909ada5c59154bb429e092"
+mediaType = "application/octet-stream"
+name = "mobilenetv2-7.onnx"
+size = 13963115
+
+[parcel.conditions]
+memberOf = ["model"]
+
+[[parcel]]
+[parcel.label]
+sha256 = "90c4ec5174bb15ea6e57448d27c8b9103b880ca174b75f339aff239586a0cfec"
+mediaType = "application/json"
+name = "mobilenetv2-7.json"
+size = 194
+
+[parcel.conditions]
+memberOf = ["metadata"]
+
+[[group]]
+name = "model"
+required = true
+satisfiedBy = "allOf"
+
+[[group]]
+name = "metadata"
+required = true
+satisfiedBy = "allOf"
+
+[[signature]]
+by = "stevelr_mlinference"
+signature = "Z5V56QtiZffjLAVbOOd2XuWy5xVg0C36c5Vh/zPWrfeVp3M0mKYJpwFtAsCjyTZGmS134i0qRMVzAKJi9WUdBA=="
+key = "CbYMLLWCm0A+RCJLcqGA7mOCzRWrp4APrO0my2eGvN8="
+role = "creator"
+at = 1689703251

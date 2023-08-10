@@ -58,10 +58,14 @@ check_requirements() {
     local _ok=0
 
     check_command wash    "Please install wash.  see https://github.com/wasmcloud/wash/" || _ok=1
+    check_command cosmo   "Please install cosmo. see https://cosmonic.com/docs/quickstart" || _ok=1
     check_command jq      "Please install jq." || _ok=1
     check_command make    "Please install make." || _ok=1
+    check_command mktemp  "Please install make." || _ok=1
     check_command base64  "Please install base64." || _ok=1
     check_command uuidgen "Please install uuidgen." || _ok=1
+    check_command bindle  "Please install bindle." || _ok=1
+    check_command bindle-server  "Please install bindle-server." || _ok=1
     make_version || _ok=1
     check_command docker  "Please install docker" || _ok=1
     check_command docker-compose  "Please install docker-compose" || _ok=1

@@ -1,12 +1,12 @@
 # Makefile for imagenetpostprocessor
 
-PROJECT  = imagenetpostprocessor
+PROJECT  = ml_imagenetpostprocessor
 VERSION  = $(shell cargo metadata --no-deps --format-version 1 | jq -r '.packages[] .version' | head -1)
 REVISION = 0
 # list of all contract claims for actor signing (space-separated)
 CLAIMS   = wasmcloud:mlimagenet wasmcloud:builtin:logging
 
-HOST_DEVICE_IP=${HOST_DEVICE_IP:-127.0.0.1}
+HOST_DEVICE_IP ?= 127.0.0.1
 
 # registry url for our actor
 REG_URL  = $(HOST_DEVICE_IP):5000/v2/$(PROJECT):$(VERSION)
