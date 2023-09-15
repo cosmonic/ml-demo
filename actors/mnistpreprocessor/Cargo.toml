@@ -11,7 +11,7 @@ name = "ml_mnistpreprocessor"
 [dependencies]
 futures = "0.3"
 form_urlencoded = "1.0"
-wasmbus-rpc = "0.13"
+wasmbus-rpc = "0.14"
 wasmcloud-interface-logging = "0.9"
 wasmcloud_interface_mlpreprocessing = { path = "../../interfaces/mlpreprocessing/rust" }
 image = { version = "0.24", default-features = false, features = ["jpeg", "png", "bmp"]  }

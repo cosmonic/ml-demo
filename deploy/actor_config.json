@@ -1,14 +1,38 @@
 {
     "models": {
       "zoo": {
-        "identity": "identity_model/0.2.0",
-        "plus3": "plus3/0.1.0",
-        "mobilenetv27": "mobilenetv2-7/0.1.0",
-        "squeezenetv117": "squeezenetv1-1-7/0.1.0",
-        "mnistv1": "mobilenetv1_uint8_quant/0.1.0",
-        "mnistv2": "mobilenetv2_uint8_quant/0.1.0",
-        "mobilenetv1tpu": "mobilenetv1_quant_edgetpu/0.1.0",
-        "resnet152v27": "resnet152-v2-7/0.1.0"
+        "identity": {
+          "metadata_path": "identity_input_output.json",
+          "model_path": "identity_input_output.onnx"
+        },
+        "plus3": {
+          "metadata_path": "plus3.json",
+          "model_path": "plus3.pb"
+        },
+        "mobilenetv27": {
+          "metadata_path": "mobilenetv2-7.json",
+          "model_path": "mobilenetv2-7.onnx"
+        },
+        "squeezenetv117": {
+          "metadata_path": "squeezenetv1-1-7.json",
+          "model_path": "squeezenetv1-1-7.onnx"
+        },
+        "mnistv1": {
+          "metadata_path": "mobilenetv1_uint8_quant.json",
+          "model_path": "mobilenetv1_uint8_quant.tflite"
+        },
+        "mnistv2": {
+          "metadata_path": "mobilenetv2_uint8_quant.json",
+          "model_path": "mobilenetv2_uint8_quant.tflite"
+        },
+        "mobilenetv1tpu": {
+          "metadata_path": "mobilenetv1_quant_edgetpu.json",
+          "model_path": "mobilenetv1_quant_edgetpu.tflite"
+        },
+        "resnet152v27": {
+          "metadata_path": "resnet152-v2-7.json",
+          "model_path": "resnet152-v2-7.onnx"
+        }
       }
     },
     "values": {

@@ -14,9 +14,9 @@ form_urlencoded = "1.0"
 futures = "0.3"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
-wasmbus-rpc = "0.13"
-wasmcloud-interface-logging = { version="0.9", features = [ "sync_macro" ] }
-wasmcloud-interface-httpserver = "0.10"
+wasmbus-rpc = "0.14"
+wasmcloud-interface-logging = { version="0.10", features = [ "sync_macro" ] }
+wasmcloud-interface-httpserver = "0.11"
 wasmcloud_interface_mlinference = { path = "../../interfaces/mlinference/rust" }
 wasmcloud_interface_mlpreprocessing = { path="../../interfaces/mlpreprocessing/rust" }
 wasmcloud_interface_mlimagenet = { path="../../interfaces/imagenetpostprocess/rust" }
