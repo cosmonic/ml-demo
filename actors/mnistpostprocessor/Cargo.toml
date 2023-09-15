@@ -12,7 +12,7 @@ name = "ml_mnistpostprocessor"
 futures = "0.3"
 byteorder = "1"
 form_urlencoded = "1.0"
-wasmbus-rpc = "0.13"
+wasmbus-rpc = "0.14"
 wasmcloud_interface_mlinference = { path = "../../interfaces/mlinference/rust" }
 wasmcloud_interface_mlimagenet = { path="../../interfaces/imagenetpostprocess/rust" }
 

@@ -31,10 +31,15 @@ impl ModelSettings {
     }
 }
 
-//#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Models {
-    pub zoo: HashMap<crate::ModelName, crate::BindlePath>,
+    pub zoo: HashMap<crate::ModelName, ModelConfig>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ModelConfig {
+    pub metadata_path: String,
+    pub model_path: String,
 }
 
 impl Models {

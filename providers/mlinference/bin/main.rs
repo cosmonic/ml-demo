@@ -1,8 +1,6 @@
 //! mlinference capability provider
 //!
-use bindle::{client::{tokens::NoToken, Client},signature::{KeyRing,KeyRingLoader} };
-use serde::Deserialize;
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 use wasmbus_rpc::provider::prelude::*;
 pub(crate) use wasmcloud_interface_mlinference::{
@@ -11,8 +9,8 @@ pub(crate) use wasmcloud_interface_mlinference::{
 #[cfg(feature = "tflite")]
 use wasmcloud_provider_mlinference::TfLiteEngine;
 use wasmcloud_provider_mlinference::{
-    get_default_inference_result, load_settings, BindleError, BindleLoader, Engine, Graph,
-    GraphEncoding, GraphExecutionContext, InferenceFramework, ModelContext, ModelZoo, TractEngine,
+    get_default_inference_result, load_settings, Engine, Graph, GraphEncoding,
+    GraphExecutionContext, InferenceFramework, ModelContext, ModelLoader, ModelZoo, TractEngine,
 };
 
 /// main (via provider_main) initializes the threaded tokio executor,
@@ -26,12 +24,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("error loading host data: {}", &e.to_string());
         Box::new(e)
     })?;
-    let settings = get_settings(host_data.config_json.as_ref().map(|x| x.as_str())
-        .unwrap_or_else( ||  "Missing config_json")
-    )?;
     provider_start(
         MlInferenceProvider {
-            settings,
             ..Default::default()
         },
         host_data,
@@ -47,7 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[services(MlInference)]
 struct MlInferenceProvider {
     /// map to store the assignments between the respective model
-    /// and corresponding bindle path for each linked actor
+    /// and corresponding path for each linked actor
     /// TODO:
     ///   - instead of delaying putLink for model loading and initialization,
     ///     add a Ready flag (AtomicBool) that is set after model is loaded and initialized.
@@ -68,8 +62,6 @@ struct MlInferenceProvider {
     /// InferenceEngine defines common behavior
     /// GraphEncoding defines a model's encoding.
     engines: Arc<RwLock<HashMap<InferenceFramework, Engine>>>,
-
-    settings: MlInferenceSettings,
 }
 
 /// use default implementations of provider message handlers
@@ -112,29 +104,6 @@ impl ProviderHandler for MlInferenceProvider {
     }
 }
 
-#[derive(Clone, Default, Deserialize)]
-struct MlInferenceSettings {
-    #[serde(alias = "BINDLE_URL")]
-    bindle_url: String,
-    #[serde(alias = "BINDLE_KEYRING")]
-    bindle_keyring: PathBuf,
-}
-
-fn get_settings(config_json: &str) -> Result<MlInferenceSettings, RpcError> {
-    let settings: MlInferenceSettings = serde_json::from_str(config_json).map_err(|e| {
-            RpcError::Deser(format!("invalid config_json in provider configuration: {e}"))
-        })?;
-    if !settings.bindle_keyring.is_file() {
-        Err(RpcError::Other(
-            "bindle_keyring must be a valid file".into(),
-        ))
-    } else if settings.bindle_url.is_empty() {
-        Err(RpcError::Other("bindle_url is invalid".into()))
-    } else {
-        Ok(settings)
-    }
-}
-
 impl MlInferenceProvider {
     async fn put_link_sub(&mut self, ld: &LinkDefinition) -> Result<bool, RpcError> {
         log::debug!("put_link_sub() - link definition is '{:?}'", ld);
@@ -150,7 +119,8 @@ impl MlInferenceProvider {
             model_zoo.insert(
                 k.to_string(),
                 ModelContext {
-                    bindle_url: v.to_string(),
+                    metadata_path: v.metadata_path.clone(),
+                    model_path: v.model_path.clone(),
                     ..ModelContext::default()
                 },
             );
@@ -161,41 +131,29 @@ impl MlInferenceProvider {
             &model_zoo
         );
 
-        let kr : KeyRing = self.settings.bindle_keyring.load().await
-            .map_err(|e| RpcError::Other(format!("Invalid keyring file {}: {e}", &self.settings.bindle_keyring.display())))?;
-        let bindle_client: Client<NoToken> =
-            Client::new(&self.settings.bindle_url, NoToken, Arc::new(kr)).map_err(|_| {
-                log::error!("Bindle Url invalid!");
-                RpcError::Other("Bindle url invalid".into())
-            })?;
-
         log::debug!("put_link_sub() - NOT done yet");
 
         for (_, context) in model_zoo.iter_mut() {
-            let downloads =
-                match BindleLoader::get_model_and_metadata(&bindle_client, &context.bindle_url)
-                    .await
-                {
-                    //.map_err(|error| {
-                    //    log::error!("get_model_and_metadata() failed!");
-                    //    RpcError::ProviderInit(format!("{}", error))
-                    //}) {
-                    Ok((metadata, model)) => (metadata, model),
-                    Err(BindleError::BindleModelNotEnabled(e)) => {
+            let (metadata, model_data_bytes) = match ModelLoader::get_model_and_metadata(
+                &context.metadata_path,
+                &context.model_path,
+            )
+            .await
+            {
+                Ok((metadata, model)) => (metadata, model),
+                Err(e) => {
+                    // TODO: unhack
+                    if e.to_string().starts_with("ModelNotEnabledError") {
                         log::error!("get_model: skipping unsupported model: {}", e);
                         continue;
-                    }
-                    Err(err) => {
-                        let msg = format!(
-                            "failed to load model from bindle url '{}': {}",
-                            &context.bindle_url, err
-                        );
-                        log::error!("{}", &msg);
+                    } else {
+                        let msg =
+                            format!("failed to load model '{}': {}", &context.metadata_path, e);
+                        log::error!("{msg}");
                         return Err(RpcError::ProviderInit(msg));
                     }
-                };
-
-            let (metadata, model_data_bytes) = downloads;
+                }
+            };
 
             context.load_metadata(metadata).map_err(|error| {
                 log::error!("load_metadata() failed!");
@@ -334,7 +292,7 @@ impl MlInferenceProvider {
             GraphEncoding::Onnx | GraphEncoding::Tensorflow => {
                 match engines_lock.get(&InferenceFramework::Tract) {
                     Some(e) => {
-                        log::debug!("get_or_else_set_engine() - previously created Onnx/Tensorflow engine selected for '{}'.", context.bindle_url);
+                        log::debug!("get_or_else_set_engine() - previously created Onnx/Tensorflow engine selected for '{}'.", context.metadata_path);
                         Ok(e.clone())
                     }
                     None => {
@@ -342,7 +300,7 @@ impl MlInferenceProvider {
                             InferenceFramework::Tract,
                             Arc::new(Box::<TractEngine>::default()),
                         );
-                        log::debug!("get_or_else_set_engine() - Onnx/Tensorflow engine selected and created for '{}'.", context.bindle_url);
+                        log::debug!("get_or_else_set_engine() - Onnx/Tensorflow engine selected and created for '{}'.", context.metadata_path);
 
                         if feedback.is_none() {
                             log::debug!(
@@ -373,7 +331,7 @@ impl MlInferenceProvider {
             GraphEncoding::TfLite => {
                 match engines_lock.get(&InferenceFramework::TfLite) {
                     Some(e) => {
-                        log::debug!("get_or_else_set_engine() - previously created TfLite engine selected for '{}'.", context.bindle_url);
+                        log::debug!("get_or_else_set_engine() - previously created TfLite engine selected for '{}'.", context.metadata_path);
                         Ok(e.clone())
                     }
                     None => {
@@ -381,7 +339,7 @@ impl MlInferenceProvider {
                             InferenceFramework::TfLite,
                             Arc::new(Box::new(TfLiteEngine::default())),
                         );
-                        log::debug!("get_or_else_set_engine() - TfLite engine selected and created for '{}'.", context.bindle_url);
+                        log::debug!("get_or_else_set_engine() - TfLite engine selected and created for '{}'.", context.metadata_path);
 
                         if feedback.is_none() {
                             log::debug!(

@@ -304,8 +304,6 @@ async fn predict(
     link_name: &str,
     tensor: Tensor,
 ) -> RpcResult<InferenceOutput> {
-    debug!("Deserialized input tensor: {:?}", tensor);
-
     let input = InferenceInput {
         model: model_name.to_string(),
         index: 0,

@@ -2,6 +2,7 @@ use crate::inference::{
     ExecutionTarget, Graph, GraphEncoding, GraphExecutionContext, InferenceEngine, InferenceError,
     InferenceResult,
 };
+use anyhow::Context;
 use async_trait::async_trait;
 use byteorder::{LittleEndian, ReadBytesExt};
 use ndarray::Array;
@@ -69,7 +70,6 @@ impl ModelState {
 impl InferenceEngine for TractEngine {
     /// load
     async fn load(&self, model: &[u8]) -> InferenceResult<Graph> {
-
         let model_bytes = model.to_vec();
         let mut state = self.state.write().await;
         let graph = state.key(state.models.keys());
@@ -91,8 +91,7 @@ impl InferenceEngine for TractEngine {
     }
 
     /// init_execution_context
-    async fn 
-    init_execution_context(
+    async fn init_execution_context(
         &self,
         graph: Graph,
         target: &ExecutionTarget,
@@ -131,11 +130,13 @@ impl InferenceEngine for TractEngine {
         };
 
         let model = match encoding {
-            GraphEncoding::Onnx => tract_onnx::onnx().model_for_read(&mut model_bytes).unwrap(),
+            GraphEncoding::Onnx => tract_onnx::onnx()
+                .model_for_read(&mut model_bytes)
+                .context("failed to get model for read")?,
 
             GraphEncoding::Tensorflow => tract_tensorflow::tensorflow()
                 .model_for_read(&mut model_bytes)
-                .unwrap(),
+                .context("failed to get model for read")?,
 
             _ => {
                 log::error!(

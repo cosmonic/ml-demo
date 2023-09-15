@@ -3,8 +3,8 @@ use std::{collections::HashMap, sync::Arc};
 use thiserror::Error as ThisError;
 use wasmcloud_interface_mlinference::{InferenceOutput, MlError, Status, Tensor, ValueType};
 
-mod bindle_loader;
-pub use bindle_loader::{BindleError, BindleLoader, ModelMetadata};
+mod model_loader;
+pub use model_loader::{ModelLoader, ModelMetadata};
 
 pub mod inference;
 #[cfg(feature = "tflite")]
@@ -20,7 +20,6 @@ pub use settings::{load_settings, ModelSettings};
 mod hashmap_ci;
 pub(crate) use hashmap_ci::make_case_insensitive;
 
-pub type BindlePath = String;
 pub type ModelName = String;
 pub type ModelZoo = HashMap<ModelName, ModelContext>;
 pub type Engine = Arc<Box<dyn InferenceEngine + Send + Sync>>;
@@ -34,7 +33,8 @@ pub enum InferenceFramework {
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct ModelContext {
-    pub bindle_url: BindlePath,
+    pub metadata_path: String,
+    pub model_path: String,
     pub graph_encoding: GraphEncoding,
     pub execution_target: ExecutionTarget,
     pub value_type: ValueType,
@@ -45,7 +45,8 @@ pub struct ModelContext {
 impl Default for ModelContext {
     fn default() -> Self {
         ModelContext {
-            bindle_url: Default::default(),
+            metadata_path: Default::default(),
+            model_path: Default::default(),
             graph_encoding: Default::default(),
             execution_target: Default::default(),
             value_type: ValueType::ValueF32,
@@ -141,10 +142,7 @@ const MODEL_KINDS: &[ModelStatus] = &[
 
 /// returns true if the model graph encoding is supported
 pub fn model_encoding_enabled(enc: GraphEncoding) -> bool {
-    MODEL_KINDS
-        .iter()
-        .find(|m| m.graph == enc && m.enabled)
-        .is_some()
+    MODEL_KINDS.iter().any(|m| m.graph == enc && m.enabled)
 }
 
 /// returns true if the model type is configured.
@@ -154,6 +152,5 @@ pub fn model_type_enabled(model_type: &str) -> bool {
     let camel = model_type.replace('_', "");
     MODEL_KINDS
         .iter()
-        .find(|m| m.name.eq_ignore_ascii_case(&camel) && m.enabled)
-        .is_some()
+        .any(|m| m.name.eq_ignore_ascii_case(&camel) && m.enabled)
 }
