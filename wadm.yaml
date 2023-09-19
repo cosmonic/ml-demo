@@ -3,13 +3,13 @@ kind: Application
 metadata:
   annotations:
     description: Demonstrate image processing across two different ML models
-    version: v0.0.12
+    version: v0.0.13
   name: ml-app
 spec:
   components:
     - name: image-ui
       properties:
-        image: ghcr.io/liamrandall/image-ui:0.1.0
+        image: ghcr.io/liamrandall/image-ui:0.2.0
       traits:
         - properties:
             replicas: 1
