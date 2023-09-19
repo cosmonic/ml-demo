@@ -6,107 +6,19 @@ This repository provides a [wasmCloud](https://wasmcloud.dev/)
 capability provider and actors to perform **inference**
 using machine learning models for ONNX and Tensorflow.
 
-## Prerequisites
+## Usage
 
-### Bindle
-
-We recommend using [bindle version v0.7.1](https://github.com/deislabs/bindle/tags)
-The latest version in github HEAD (as of March 2022) has not been released,
-and includes signature checks, and are not compatible with the scripts
-and models in this repo.
-
-### Docker Compose
-
-Make sure your Docker install has [Compose v2](https://docs.docker.com/compose/cli-command/#installing-compose-v2).
-
-### Wasmcloud host
-
-Download a wasmcloud host binary release for your platform from
-[Releases](https://github.com/wasmCloud/wasmcloud-otp/releases)
-and unpack it. The path to the download folder should be set as
-`WASMCLOUD_HOST_HOME` in `deploy/env`
-
-## Build actors and providers
-
-From the top-level **directory** build with `make`. This should complete
-without errors.
-
-### Prepare models
-
-Models (in `bindle/models`) must be loaded into the bindle server.
-
-If you are using your own model, you will need to create a "bindle
-invoice", a `.toml` file listing the bindle artifacts. Each artifact
-has a sha256 hash and file size of each artifact. See the
-existing toml files in `bindle/models` for examples.
-
-## Configuration
-
-Update paths in file `deploy/env` to match your development environment.
-
-Be sure to set BINDLE and BINDLE_SERVER in `env` to the paths to the bindle cli
-and bindle server executables, respectively. If they are in your $PATH,
-you can just set these to `bindle` and `bindle-server`. If you built
-bindle from git, use the 0.7.1 tag, run `cargo build`, and set
-BINDLE_HOME to the path to the git repo.
-
-## Running
-
-The script `deploy/run.sh` contains commands to run everything. In the
-`deploy` folder, run `run.sh` to see a list of available subcommands.
-
-Start the bindle server and load the models.
+In order to run and deploy the ML Demo on Cosmonic, follow the [Cosmonic Getting Started Guide](https://cosmonic.com/docs/user_guide/cli/getting_started#installing-the-cli) and use the `cosmo` CLI to deploy the application.
 
 ```bash
-./run.sh bindle-start
-./run.sh bindle-create
+cosmo up -d
+
+# Using wadm manifest: https://github.com/wasmCloud/wadm
+cosmo app put wadm.yaml
+cosmo app deploy ml-app
 ```
 
-Start the local registry server, nats server, wasmcloud host,
-actors, and providers. If this is your first time running running this
-app, add `--console` to the end of the following command to open a new
-terminal window with the host logs. The logs may be useful for
-diagnosing any problems.
 
-```bash
-./run.sh all
-# or, to open a $TERMINAL window with host logs
-./run.sh all --console
-```
-
-After a successful startup the _washboard_ should look similar to the following screenshot:
-
-<div style="width: 80%; height: 50%">
-![washboard after successful launch](images/washboard.png "washboard after successful launch")
-</div>
-
-If everything started correctly, try sending an image to be classified:
-(try any of the images in `images/`, or try one of your own!
-
-```bash
-curl -T images/cat.jpg http://localhost:8078/mobilenetv27/matches | jq
-```
-
-To stop the host and providers,
-
-```bash
-/run.sh wipe
-```
-
-The above command stops everything except the bindle server.
-
-To stop the bindle server,
-
-```bash
-./run.sh bindle-stop
-```
-
-Once the application is up and running, start to issue requests. Currently, the repository comprises the following pre-configured models:
-
-- **_identity_** of ONNX format
-- **_plus3_** of Tensorflow format
-- **_mobilenet_** of ONNX format
-- **_squeezenet_** of ONNX format
 
 ## Examples
 

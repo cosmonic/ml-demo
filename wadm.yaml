@@ -1,0 +1,107 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  annotations:
+    description: Demonstrate image processing across two different ML models
+    version: v0.0.11
+  name: ml-app
+spec:
+  components:
+    - name: image-ui
+      properties:
+        image: ghcr.io/liamrandall/image-ui:0.1.0
+      traits:
+        - properties:
+            replicas: 1
+            spread:
+              - name: remote
+                requirements:
+                  stargate: 'true'
+          type: spreadscaler
+        - properties:
+            target: httpserver
+          type: linkdef
+      type: actor
+    - name: imagenet-post-processor
+      properties:
+        image: ghcr.io/liamrandall/imagenetpostprocessor:0.1.0
+      traits:
+        - properties:
+            replicas: 1
+            spread:
+              - name: remote
+                requirements:
+                  stargate: 'true'
+          type: spreadscaler
+      type: actor
+    - name: imagenet-pre-processor
+      properties:
+        image: ghcr.io/liamrandall/imagenetpreprocessor:0.1.0
+      traits:
+        - properties:
+            replicas: 1
+            spread:
+              - name: remote
+                requirements:
+                  stargate: 'true'
+          type: spreadscaler
+      type: actor
+    - name: inference-api
+      properties:
+        image: ghcr.io/connorsmith256/inferenceapi:0.2.0
+      traits:
+        - properties:
+            replicas: 1
+            spread:
+              - name: remote
+                requirements:
+                  stargate: 'true'
+          type: spreadscaler
+        - properties:
+            target: httpserver
+          type: linkdef
+        - properties:
+            target: mlinference
+            values:
+              config_b64: >-
+                ewogICAgIm1vZGVscyI6IHsKICAgICAgInpvbyI6IHsKICAgICAgICAiaWRlbnRpdHkiOiB7CiAgICAgICAgICAibWV0YWRhdGFfcGF0aCI6ICJpZGVudGl0eV9pbnB1dF9vdXRwdXQuanNvbiIsCiAgICAgICAgICAibW9kZWxfcGF0aCI6ICJpZGVudGl0eV9pbnB1dF9vdXRwdXQub25ueCIKICAgICAgICB9LAogICAgICAgICJwbHVzMyI6IHsKICAgICAgICAgICJtZXRhZGF0YV9wYXRoIjogInBsdXMzLmpzb24iLAogICAgICAgICAgIm1vZGVsX3BhdGgiOiAicGx1czMucGIiCiAgICAgICAgfSwKICAgICAgICAibW9iaWxlbmV0djI3IjogewogICAgICAgICAgIm1ldGFkYXRhX3BhdGgiOiAibW9iaWxlbmV0djItNy5qc29uIiwKICAgICAgICAgICJtb2RlbF9wYXRoIjogIm1vYmlsZW5ldHYyLTcub25ueCIKICAgICAgICB9LAogICAgICAgICJzcXVlZXplbmV0djExNyI6IHsKICAgICAgICAgICJtZXRhZGF0YV9wYXRoIjogInNxdWVlemVuZXR2MS0xLTcuanNvbiIsCiAgICAgICAgICAibW9kZWxfcGF0aCI6ICJzcXVlZXplbmV0djEtMS03Lm9ubngiCiAgICAgICAgfSwKICAgICAgICAibW5pc3R2MSI6IHsKICAgICAgICAgICJtZXRhZGF0YV9wYXRoIjogIm1vYmlsZW5ldHYxX3VpbnQ4X3F1YW50Lmpzb24iLAogICAgICAgICAgIm1vZGVsX3BhdGgiOiAibW9iaWxlbmV0djFfdWludDhfcXVhbnQudGZsaXRlIgogICAgICAgIH0sCiAgICAgICAgIm1uaXN0djIiOiB7CiAgICAgICAgICAibWV0YWRhdGFfcGF0aCI6ICJtb2JpbGVuZXR2Ml91aW50OF9xdWFudC5qc29uIiwKICAgICAgICAgICJtb2RlbF9wYXRoIjogIm1vYmlsZW5ldHYyX3VpbnQ4X3F1YW50LnRmbGl0ZSIKICAgICAgICB9LAogICAgICAgICJtb2JpbGVuZXR2MXRwdSI6IHsKICAgICAgICAgICJtZXRhZGF0YV9wYXRoIjogIm1vYmlsZW5ldHYxX3F1YW50X2VkZ2V0cHUuanNvbiIsCiAgICAgICAgICAibW9kZWxfcGF0aCI6ICJtb2JpbGVuZXR2MV9xdWFudF9lZGdldHB1LnRmbGl0ZSIKICAgICAgICB9LAogICAgICAgICJyZXNuZXQxNTJ2MjciOiB7CiAgICAgICAgICAibWV0YWRhdGFfcGF0aCI6ICJyZXNuZXQxNTItdjItNy5qc29uIiwKICAgICAgICAgICJtb2RlbF9wYXRoIjogInJlc25ldDE1Mi12Mi03Lm9ubngiCiAgICAgICAgfQogICAgICB9CiAgICB9LAogICAgInZhbHVlcyI6IHsKICAgICAgImxhenlfbG9hZCI6IGZhbHNlCiAgICB9CiAgfQo=
+          type: linkdef
+      type: actor
+    - name: imagenet-pre-processor-rgb
+      properties:
+        image: ghcr.io/liamrandall/imagenetpreprocrgb8:0.1.0
+      traits:
+        - properties:
+            replicas: 1
+            spread:
+              - name: remote
+                requirements:
+                  stargate: 'true'
+          type: spreadscaler
+      type: actor
+    - name: httpserver
+      properties:
+        contract: wasmcloud:httpserver
+        image: cosmonic.azurecr.io/httpserver_wormhole:0.6.0
+      traits:
+        - properties:
+            replicas: 1
+            spread:
+              - name: wormholespread
+                requirements:
+                  cosmonic_managed: 'true'
+          type: spreadscaler
+      type: capability
+    - name: ml-inference-provider
+      properties:
+        contract: wasmcloud:mlinference
+        image: ghcr.io/connorsmith256/mlinference:0.2.1
+      traits:
+        - properties:
+            replicas: 1
+            spread:
+              - name: remote
+                requirements:
+                  stargate: 'true'
+          type: spreadscaler
+      type: capability

@@ -38,15 +38,6 @@ export WASMCLOUD_STRUCTURED_LOG_LEVEL=debug
 export RUST_LOG=${RUST_LOG:-RUST_LOG=debug,hyper=info,oci_distribution=info,reqwest=info}
 
 ##
-#   BINDLE
-## 
-
-# do NOT touch unless you know what you do
-BINDLE_CONFIGURATION_SCRIPT="${_DIR}/../bindle/scripts/bindle_start.sh"
-BINDLE_CREATION_SCRIPT="${_DIR}/../bindle/scripts/bindle_create.sh"
-BINDLE_SHUTDOWN_SCRIPT="${_DIR}/../bindle/scripts/bindle_stop.sh"
-
-##
 #   WASMCLOUD HOST
 ##
 
@@ -120,9 +111,6 @@ __WIPE
     killall --quiet -KILL wasmcloud_mlinference_default || true
 
     wash drain all
-
-    # clear bindle cache
-    rm -rf ~/.cache/bindle ~/Library/Caches/bindle
 }
 
 create_seed() {
@@ -143,42 +131,6 @@ __SECRETS
 
     # protect secret files
     chmod 600 $ALL_SECRET_FILES
-}
-
-start_bindle() {
-    echo "\n[bindle-server startup]"
-
-    if [ -z "$BINDLE_SERVER" ] || [ ! -x $BINDLE_SERVER ]; then
-      echo "You must define BINDLE_HOME or BINDLE_SERVER"
-      exit 1
-    fi
-    echo "BINDLE_SERVER is set to '${BINDLE_SERVER}'"
-
-    if [ -z "$BINDLE_URL" ];  then
-      echo "You must define BINDLE_URL"
-      exit 1
-    fi
-    echo "BINDLE_URL is set to '${BINDLE_URL}'"
-
-    eval '"$BINDLE_CONFIGURATION_SCRIPT"'
-}
-
-stop_bindle() {
-    echo "\n[bindle-server shutdown]"
-
-    eval '"$BINDLE_SHUTDOWN_SCRIPT"'
-}
-
-create_bindle() {   
-    start_bindle
-
-    echo "\n[bindle creation]"
-
-    if [ -z "$BINDLE" ] || [ ! -x $BINDLE ]; then
-      echo "You must define BINDLE_HOME or BINDLE"
-      exit 1
-    fi
-    eval '"$BINDLE_CREATION_SCRIPT"'
 }
 
 # get the host id (requires wasmcloud to be running)
