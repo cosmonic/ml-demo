@@ -2,7 +2,7 @@
 #
 # Start all the services.
 # Before running this, secrets need to be created. The easiest thing to do
-# is to use './run.sh all' to start all services.
+# is to use './run-demo.sh all' to start all services.
 #
 # What's here:
 #   wasmcloud host
@@ -43,6 +43,5 @@ services:
   #     WASMCLOUD_PROV_RPC_HOST: nats
   #     WASMCLOUD_CLUSTER_SEED: ${WASMCLOUD_CLUSTER_SEED}
   #   ports:
-  #     - "127.0.0.1:4000:4000"  # washboard
   #     - "127.0.0.1:443:8443"   # httpserver HTTPS port
   #     - "127.0.0.1:8080:8080"

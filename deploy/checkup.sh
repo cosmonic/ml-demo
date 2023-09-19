@@ -48,7 +48,6 @@ check_ports() {
     check_port 6222 # nats
     check_port 8222 # nats
     check_port 5000 # registry
-    check_port 4000 # washboard
     check_port 443  # httpsserver (https)
     check_port 8080 # httpsserver (http)
 }
@@ -64,8 +63,6 @@ check_requirements() {
     check_command mktemp  "Please install make." || _ok=1
     check_command base64  "Please install base64." || _ok=1
     check_command uuidgen "Please install uuidgen." || _ok=1
-    check_command bindle  "Please install bindle." || _ok=1
-    check_command bindle-server  "Please install bindle-server." || _ok=1
     make_version || _ok=1
     check_command docker  "Please install docker" || _ok=1
     check_command docker-compose  "Please install docker-compose" || _ok=1
