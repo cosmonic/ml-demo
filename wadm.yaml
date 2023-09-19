@@ -92,7 +92,7 @@ spec:
                   cosmonic_managed: 'true'
           type: spreadscaler
       type: capability
-    - name: ml-inference
+    - name: mlinference
       properties:
         contract: wasmcloud:mlinference
         image: ghcr.io/connorsmith256/mlinference:0.2.1
