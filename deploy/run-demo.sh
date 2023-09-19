@@ -13,7 +13,6 @@ cat <<_SHOW_HELP
 
    $0 inventory                    - show host inventory
 
-Custom environment variables and paths should be set in ${_DIR}/env
 _SHOW_HELP
 }
 
@@ -28,13 +27,6 @@ WASMCLOUD_HOST=${WASMCLOUD_HOST:-wasmcloud}
 WASMCLOUD_JS_DOMAIN=${WASMCLOUD_JS_DOMAIN:-cosmonic}
 
 check=$(printf '\342\234\224\n' | iconv -f UTF-8)
-
-if [ ! -f "$_DIR/env" ]; then
-    echo "Missing $_DIR/env file"
-    exit 1
-fi
-source "$_DIR/env"
-
 
 # allow extra time to process RPC
 export WASMCLOUD_RPC_TIMEOUT_MS=8000

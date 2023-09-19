@@ -12,11 +12,11 @@ In order to run and deploy the ML Demo on Cosmonic, follow the [Cosmonic Getting
 
 ```bash
 cosmo up
-
-# Using wadm manifest: https://github.com/wasmCloud/wadm
-cosmo app put wadm.yaml
-cosmo app deploy ml-app
+cosmo app deploy ./wadm.yaml
 ```
+
+The deployed application should look like the following:
+![Cosmonic Logic View showing that some actors are OK to not be linked](./images/cosmonic-logic-view.png)
 
 ## Examples
 

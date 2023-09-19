@@ -48,7 +48,6 @@ check_ports() {
     check_port 6222 # nats
     check_port 8222 # nats
     check_port 5000 # registry
-    check_port 4000 # washboard
     check_port 443  # httpsserver (https)
     check_port 8080 # httpsserver (http)
 }

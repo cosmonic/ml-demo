@@ -3,7 +3,7 @@ kind: Application
 metadata:
   annotations:
     description: Demonstrate image processing across two different ML models
-    version: v0.0.13
+    version: v0.0.14
   name: ml-app
 spec:
   components:
@@ -82,7 +82,7 @@ spec:
     - name: httpserver
       properties:
         contract: wasmcloud:httpserver
-        image: cosmonic.azurecr.io/httpserver_wormhole:0.5.4
+        image: cosmonic.azurecr.io/httpserver_wormhole:0.6.0
       traits:
         - properties:
             replicas: 1
@@ -92,7 +92,7 @@ spec:
                   cosmonic_managed: 'true'
           type: spreadscaler
       type: capability
-    - name: ml-inference-provider
+    - name: ml-inference
       properties:
         contract: wasmcloud:mlinference
         image: ghcr.io/connorsmith256/mlinference:0.2.1
