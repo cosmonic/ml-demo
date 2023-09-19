@@ -3,7 +3,7 @@ kind: Application
 metadata:
   annotations:
     description: Demonstrate image processing across two different ML models
-    version: v0.0.11
+    version: v0.0.12
   name: ml-app
 spec:
   components:
@@ -82,7 +82,7 @@ spec:
     - name: httpserver
       properties:
         contract: wasmcloud:httpserver
-        image: cosmonic.azurecr.io/httpserver_wormhole:0.6.0
+        image: cosmonic.azurecr.io/httpserver_wormhole:0.5.4
       traits:
         - properties:
             replicas: 1

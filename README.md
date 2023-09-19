@@ -11,14 +11,12 @@ using machine learning models for ONNX and Tensorflow.
 In order to run and deploy the ML Demo on Cosmonic, follow the [Cosmonic Getting Started Guide](https://cosmonic.com/docs/user_guide/cli/getting_started#installing-the-cli) and use the `cosmo` CLI to deploy the application.
 
 ```bash
-cosmo up -d
+cosmo up
 
 # Using wadm manifest: https://github.com/wasmCloud/wadm
 cosmo app put wadm.yaml
 cosmo app deploy ml-app
 ```
-
-
 
 ## Examples
 

@@ -7,15 +7,6 @@
 From the top-level **directory** build with `make`. This should complete
 without errors.
 
-### Prepare models
-
-Models (in `bindle/models`) must be loaded into the bindle server.
-
-If you are using your own model, you will need to create a "bindle
-invoice", a `.toml` file listing the bindle artifacts. Each artifact
-has a sha256 hash and file size of each artifact. See the
-existing toml files in `bindle/models` for examples.
-
 ## Configuration
 
 Update paths in file `deploy/env` to match your development environment.
